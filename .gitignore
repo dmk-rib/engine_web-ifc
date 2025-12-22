@@ -49,6 +49,7 @@ build_wasm_debug
 *.log
 node_modules
 **/dist/*
+target/
 
 .idea/
 

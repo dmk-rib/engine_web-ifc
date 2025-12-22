@@ -1,0 +1,27 @@
+SCHEMA IFCMINI;
+
+TYPE IfcLabel = STRING;
+END_TYPE;
+
+TYPE IfcLengthMeasure = REAL;
+END_TYPE;
+
+TYPE IfcWallTypeEnum = ENUMERATION OF (STANDARD, POLYGONAL);
+END_TYPE;
+
+TYPE IfcSelectType = SELECT (IfcWall, IfcLabel);
+END_TYPE;
+
+ENTITY IfcRoot;
+ GlobalId : IfcLabel;
+ OwnerHistory : IfcLabel;
+END_ENTITY;
+
+ENTITY IfcWall
+ SUBTYPE OF (IfcRoot);
+ Name : OPTIONAL IfcLabel;
+ Height : OPTIONAL IfcLengthMeasure;
+ Tags : LIST [1:?] OF IfcLabel;
+END_ENTITY;
+
+END_SCHEMA;
