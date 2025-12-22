@@ -13,3 +13,4 @@ thiserror = "1.0"
 glam = "0.25"
 smallvec = "1.11"
 earcutr = "0.4"
+uuid = { version = "1.7", features = ["v4"] }

@@ -81,7 +81,7 @@ impl ModelManager {
     }
 
     pub fn is_model_open(&self, model_id: u32) -> bool {
-        model_id as usize  < self.loaders.len()
+        (model_id as usize) < self.loaders.len()
     }
 
     pub fn close_model(&mut self, _model_id: u32) {
