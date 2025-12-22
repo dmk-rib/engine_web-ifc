@@ -161,32 +161,55 @@ pub fn revolve_cylinder(
 
 #[inline]
 pub fn matrix_flips_triangles_mat3(mat: DMat3) -> bool {
-    let cx = mat.x_axis;
-    let cy = mat.y_axis;
-    let cz = mat.z_axis;
-    let dx = cy.cross(cz);
-    let dy = cx.cross(cz);
-    let dz = cx.cross(cy);
-    let fac1 = cx.dot(dx);
-    let fac2 = -cy.dot(dy);
-    let fac3 = cz.dot(dz);
-    fac1 * fac2 * fac3 < 0.0
+    mat.determinant() < 0.0
 }
 
 #[inline]
 pub fn matrix_flips_triangles(mat: DMat4) -> bool {
-    matrix_flips_triangles_mat3(DMat3::from_cols(mat.x_axis.truncate(), mat.y_axis.truncate(), mat.z_axis.truncate()))
+    mat.determinant() < 0.0
 }
 
 pub fn convert_2d_alignments_to_3d(horizontal: &[DVec3], vertical: &[DVec3]) -> Vec<DVec3> {
-    let mut points = Vec::new();
-    for h in horizontal {
-        points.push(DVec3::new(h.x, h.y, h.z));
+    let mut curve3d = Vec::new();
+    if horizontal.is_empty() || vertical.is_empty() {
+        return curve3d;
     }
-    for v in vertical {
-        points.push(DVec3::new(v.x, v.y, v.z));
+
+    let mut length = 0.0;
+    let mut last_x = horizontal[0].x;
+    let mut last_y = horizontal[0].y;
+
+    for pt_h in horizontal {
+        let dx = pt_h.x - last_x;
+        let dy = pt_h.y - last_y;
+        length += (dx * dx + dy * dy).sqrt();
+        last_x = pt_h.x;
+        last_y = pt_h.y;
+
+        let mut altitude = 0.0;
+        let mut last_alt = vertical[0].y;
+        let mut last_vx = vertical[0].x;
+        let mut found = false;
+
+        for pt_v in vertical.iter().skip(1) {
+            if pt_v.x >= length {
+                let ratio = (length - last_vx) / (pt_v.x - last_vx);
+                altitude = last_alt * (1.0 - ratio) + pt_v.y * ratio;
+                found = true;
+                break;
+            }
+            last_alt = pt_v.y;
+            last_vx = pt_v.x;
+        }
+
+        if !found {
+            altitude = vertical.last().unwrap().y;
+        }
+
+        curve3d.push(DVec3::new(pt_h.x, altitude, -pt_h.y));
     }
-    points
+
+    curve3d
 }
 
 pub fn get_ellipse_curve(
@@ -194,33 +217,70 @@ pub fn get_ellipse_curve(
     radius_y: f32,
     num_segments: i32,
     placement: DMat3,
-    start_rad: f64,
-    end_rad: f64,
+    mut start_rad: f64,
+    mut end_rad: f64,
     swap: bool,
     normal_to_center_ending: bool,
 ) -> Curve {
     let mut curve = Curve::default();
-    let n = num_segments.max(3) as usize;
-    let span = end_rad - start_rad;
-    let step = span / (n as f64);
-
-    for i in 0..=n {
-        let angle = start_rad + (i as f64) * step;
-        let mut x = angle.cos() * radius_x as f64;
-        let mut y = angle.sin() * radius_y as f64;
-        if swap {
-            std::mem::swap(&mut x, &mut y);
-        }
-        let local = DVec3::new(x, y, 0.0);
-        let world = placement * local;
-        curve.add(world, true);
-    }
-
     if normal_to_center_ending {
-        if let Some(last) = curve.points.last().copied() {
-            let center = placement * DVec3::ZERO;
-            let dir = (center - last).normalize_or_zero();
-            curve.add(last + dir * EPS_TINY_CURVE, false);
+        let sweep_angle = end_rad - start_rad;
+        let step = sweep_angle / (num_segments - 1) as f64;
+
+        if end_rad > start_rad {
+            start_rad -= step / 2.0;
+            end_rad += step / 2.0;
+        }
+        if end_rad <= start_rad {
+            start_rad += step / 2.0;
+            end_rad -= step / 2.0;
+        }
+
+        for i in 0..num_segments {
+            let ratio = i as f64 / (num_segments - 1) as f64;
+            let angle = start_rad + ratio * (end_rad - start_rad);
+
+            let circle_coordinate = if swap {
+                DVec2::new(radius_x as f64 * angle.cos(), radius_y as f64 * angle.sin())
+            } else {
+                DVec2::new(radius_x as f64 * angle.sin(), radius_y as f64 * angle.cos())
+            };
+
+            let pos = placement * DVec3::new(circle_coordinate.x, circle_coordinate.y, 1.0);
+            curve.points.push(DVec3::new(pos.x, pos.y, 0.0));
+        }
+
+        if curve.points.len() >= 2 {
+            curve.points[0] = (curve.points[0] + curve.points[1]) * 0.5;
+            let last = curve.points.len() - 1;
+            curve.points[last] = (curve.points[last] + curve.points[last - 1]) * 0.5;
+        }
+
+        if end_rad == CONST_PI * 2.0 && start_rad == 0.0 {
+            curve.points.push(curve.points[0]);
+            if matrix_flips_triangles_mat3(placement) {
+                curve.invert();
+            }
+        }
+    } else {
+        for i in 0..num_segments {
+            let ratio = i as f64 / (num_segments - 1) as f64;
+            let angle = start_rad + ratio * (end_rad - start_rad);
+
+            let circle_coordinate = if swap {
+                DVec2::new(radius_x as f64 * angle.cos(), radius_y as f64 * angle.sin())
+            } else {
+                DVec2::new(radius_x as f64 * angle.sin(), radius_y as f64 * angle.cos())
+            };
+            let pos = placement * DVec3::new(circle_coordinate.x, circle_coordinate.y, 1.0);
+            curve.points.push(DVec3::new(pos.x, pos.y, 0.0));
+        }
+
+        if end_rad == CONST_PI * 2.0 && start_rad == 0.0 {
+            curve.points.push(curve.points[0]);
+            if matrix_flips_triangles_mat3(placement) {
+                curve.invert();
+            }
         }
     }
 
@@ -236,17 +296,20 @@ pub fn solve_parabola(
     end_gradient: f64,
 ) -> Vec<DVec2> {
     let mut points = Vec::with_capacity(segments as usize + 1);
-    let d = horizontal_length;
-    let a = (end_gradient - start_gradient) / (2.0 * d);
-    let b = start_gradient;
-    let c = start_height;
-    let step = d / segments as f64;
+    let r = horizontal_length / (end_gradient - start_gradient);
 
     for i in 0..=segments {
-        let x = i as f64 * step;
-        let y = a * x * x + b * x + c;
-        points.push(DVec2::new(start_point.x + x, start_point.y + y));
+        let pr = i as f64 / segments as f64;
+        let grad = ((horizontal_length * pr) / r) + start_gradient;
+        let alt = (horizontal_length * pr * (grad + start_gradient) * 0.5) + start_height;
+        points.push(DVec2::new(horizontal_length * pr, alt));
     }
+
+    points.iter_mut().for_each(|pt| {
+        pt.x += start_point.x;
+        pt.y += start_point.y;
+    });
+
     points
 }
 
@@ -258,21 +321,80 @@ pub fn solve_clothoid(
     end_radius_of_curvature: f64,
     segment_length: f64,
 ) -> Vec<DVec2> {
-    let mut points = Vec::with_capacity(segments as usize + 1);
+    let mut points = Vec::new();
 
-    let mut angle = ifc_start_direction;
-    let mut pos = DVec2::new(start_point.x, start_point.y);
-    points.push(pos);
+    let mut inverse = false;
+    if start_radius_of_curvature.abs() > end_radius_of_curvature.abs() {
+        inverse = true;
+    }
 
-    let step = segment_length / segments as f64;
-    let curvature_delta = (1.0 / end_radius_of_curvature) - (1.0 / start_radius_of_curvature);
+    let a = (end_radius_of_curvature - start_radius_of_curvature).abs().sqrt() * segment_length.sqrt();
+    let api = a * CONST_PI.sqrt();
+    let u_max = segment_length / api;
 
-    for i in 1..=segments {
-        let t = i as f64 / segments as f64;
-        let curvature = (1.0 / start_radius_of_curvature) + curvature_delta * t;
-        angle += curvature * step;
-        pos += DVec2::new(angle.cos(), angle.sin()) * step;
-        points.push(pos);
+    let s = a * u_max * CONST_PI.sqrt();
+    let _rad_fin = (a * a * a) / (a * s);
+
+    let mut v_sin = 0.0;
+    let mut v_cos = 0.0;
+
+    let mut direction_x = DVec2::new(ifc_start_direction.cos(), ifc_start_direction.sin());
+    let mut direction_y = DVec2::new(-ifc_start_direction.sin(), ifc_start_direction.cos());
+
+    if end_radius_of_curvature < 0.0 || start_radius_of_curvature < 0.0 {
+        direction_y = -direction_y;
+    }
+
+    if inverse {
+        direction_x = -direction_x;
+    }
+
+    let def = 2000.0;
+    let dif = def / segments as f64;
+    let mut count = 0.0;
+    let tram = u_max / (def - 1.0);
+    let mut end = DVec2::new(0.0, 0.0);
+    let mut prev = DVec2::new(0.0, 0.0);
+    let mut end_dir = DVec2::new(0.0, 0.0);
+
+    for c in 1..=(def as i32) {
+        prev = end;
+        end = start_point + api * (direction_x * v_cos + direction_y * v_sin);
+        if c == def as i32 || c == 1 || count >= dif {
+            points.push(end);
+            count = 0.0;
+        }
+        if c == def as i32 {
+            end_dir = prev - end;
+        }
+        let val = c as f64 * tram;
+        v_sin += (CONST_PI * ((a * val * val) / (2.0 * a.abs()))).sin() * tram;
+        v_cos += (CONST_PI * ((a * val * val) / (2.0 * a.abs()))).cos() * tram;
+        count += 1.0;
+    }
+
+    if inverse {
+        direction_x = -direction_x;
+        let mut new_direction_x = DVec2::new(end_dir.x, end_dir.y);
+        let mut new_direction_y = DVec2::new(-end_dir.y, end_dir.x);
+
+        if end_radius_of_curvature < 0.0 || start_radius_of_curvature < 0.0 {
+            new_direction_y = -new_direction_y;
+        }
+
+        new_direction_x = new_direction_x.normalize();
+        new_direction_y = new_direction_y.normalize();
+
+        for pt in &mut points {
+            let xx = pt.x - end.x;
+            let yy = pt.y - end.y;
+            let dx = xx * new_direction_x.x + yy * new_direction_x.y;
+            let dy = xx * new_direction_y.x + yy * new_direction_y.y;
+            let new_dx = start_point.x + direction_x.x * dx + direction_y.x * dy;
+            let new_dy = start_point.y + direction_x.y * dx + direction_y.y * dy;
+            pt.x = new_dx;
+            pt.y = new_dy;
+        }
     }
 
     points
