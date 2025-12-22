@@ -1,7 +1,9 @@
-//! Auto-generated Rust stub mirroring `web-ifc/geometry/operations/bim-geometry/face.h`.
-//!
-//! TODO: Replace stub with a full, semantics-preserving Rust implementation.
+//! Triangle face indices.
 
-#![allow(dead_code, unused_variables)]
-
-// Placeholder for ported code.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct Face {
+    pub i0: u32,
+    pub i1: u32,
+    pub i2: u32,
+    pub p_id: u32,
+}

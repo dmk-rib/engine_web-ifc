@@ -1,18 +1,22 @@
-//! Minimal plane definition.
+//! Plane representation.
 
-use glam::{DVec3, DVec4};
+use glam::DVec3;
 
-#[derive(Copy, Clone, Debug, Default)]
+use super::epsilons::TOLERANCE_VECTOR_EQUALITY;
+
+#[derive(Clone, Debug, Default)]
 pub struct Plane {
+    pub id: usize,
     pub normal: DVec3,
-    pub offset: f64,
+    pub distance: f64,
 }
 
 impl Plane {
-    pub fn from_vec4(data: DVec4) -> Self {
-        Self {
-            normal: data.truncate(),
-            offset: data.w,
-        }
+    pub fn is_equal_to(&self, normal: DVec3, distance: f64) -> bool {
+        let eps = TOLERANCE_VECTOR_EQUALITY;
+        (self.normal.x - normal.x).abs() <= eps
+            && (self.normal.y - normal.y).abs() <= eps
+            && (self.normal.z - normal.z).abs() <= eps
+            && (self.distance - distance).abs() <= eps
     }
 }
