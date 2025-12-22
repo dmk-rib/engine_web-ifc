@@ -318,7 +318,7 @@ impl Properties {
         model_id: i32,
         node: &mut Node,
         tree_chunks: &HashMap<i32, Vec<i32>>,
-        _prop_names: &PropNames,
+        prop_names: &PropNames,
         include_properties: bool,
     ) -> Result<(), IfcApiError> {
         let children = match tree_chunks.get(&node.express_id) {
