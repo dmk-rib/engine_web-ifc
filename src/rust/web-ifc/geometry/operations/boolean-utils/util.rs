@@ -1,7 +1,18 @@
-//! Auto-generated Rust stub mirroring `web-ifc/geometry/operations/boolean-utils/util.h`.
-//!
-//! TODO: Replace stub with a full, semantics-preserving Rust implementation.
+//! Rust port of `web-ifc/geometry/operations/boolean-utils/util.h`.
 
-#![allow(dead_code, unused_variables)]
+#[cfg(windows)]
+pub fn write_file(filename: &str, data: &str) {
+    use std::fs;
+    use std::path::PathBuf;
 
-// Placeholder for ported code.
+    let mut path = PathBuf::from("debug_output");
+    let _ = fs::create_dir_all(&path);
+    path.push(filename);
+    if let Ok(mut file) = fs::File::create(path) {
+        use std::io::Write;
+        let _ = file.write_all(data.as_bytes());
+    }
+}
+
+#[cfg(not(windows))]
+pub fn write_file(_filename: &str, _data: &str) {}

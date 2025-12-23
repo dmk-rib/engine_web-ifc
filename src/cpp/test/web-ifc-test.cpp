@@ -6,6 +6,9 @@
 #include <fstream>
 #include <cstdint>
 #include <filesystem>
+#include <cstdlib>
+#include <string_view>
+#include <cctype>
 #include "io_helpers.h"
 
 #include "../web-ifc/parsing/IfcLoader.h"
@@ -22,6 +25,43 @@ long long ms()
         system_clock::now().time_since_epoch());
 
     return millis.count();
+}
+
+bool ShouldWriteFiles()
+{
+    static const bool shouldWrite = []() {
+        const char *flag = std::getenv("WEB_IFC_TEST_WRITE_FILES");
+        if (flag == nullptr)
+        {
+            return false;
+        }
+
+        std::string_view value(flag);
+        if (value == "1")
+        {
+            return true;
+        }
+
+        auto matchesIgnoreCase = [&](std::string_view expected) {
+            if (value.size() != expected.size())
+            {
+                return false;
+            }
+            for (size_t i = 0; i < value.size(); i++)
+            {
+                if (std::tolower(static_cast<unsigned char>(value[i])) !=
+                    std::tolower(static_cast<unsigned char>(expected[i])))
+                {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        return matchesIgnoreCase("true") || matchesIgnoreCase("yes");
+    }();
+
+    return shouldWrite;
 }
 
 double RandomDouble(double lo, double hi)
@@ -53,11 +93,9 @@ void SpecificLoadTest(webifc::parsing::IfcLoader &loader, webifc::geometry::IfcG
 {
     auto walls = loader.GetExpressIDsWithType(webifc::schema::IFCSLAB);
 
-    bool writeFiles = true;
-
     auto mesh = geometryLoader.GetMesh(num);
 
-    if (writeFiles)
+    if (ShouldWriteFiles())
     {
         DumpMesh(mesh, geometryLoader, "TEST.obj");
     }
@@ -78,9 +116,7 @@ std::vector<webifc::geometry::IfcAlignment> GetAlignments(webifc::parsing::IfcLo
         alignments.push_back(alignment);
     }
 
-    bool writeFiles = true;
-
-    if (writeFiles)
+    if (ShouldWriteFiles())
     {
         DumpAlignment(alignments, "V_ALIGN.obj", "H_ALIGN.obj");
     }
@@ -133,9 +169,7 @@ std::vector<webifc::geometry::IfcCrossSections> GetCrossSections3D(webifc::parsi
         }
     }
 
-    bool writeFiles = true;
-
-    if (writeFiles)
+    if (ShouldWriteFiles())
     {
         DumpCrossSections(crossSections, "CrossSection.obj");
     }
@@ -273,8 +307,6 @@ std::vector<webifc::geometry::IfcFlatMesh> LoadAllTest(webifc::parsing::IfcLoade
     std::vector<webifc::geometry::IfcFlatMesh> meshes;
     webifc::schema::IfcSchemaManager schema;
 
-    bool writeFiles = true;
-
     for (auto type : schema.GetIfcElementList())
     {
         auto elements = loader.GetExpressIDsWithType(type);
@@ -283,7 +315,7 @@ std::vector<webifc::geometry::IfcFlatMesh> LoadAllTest(webifc::parsing::IfcLoade
         {
             auto mesh = geometryLoader.GetFlatMesh(elements[i]);
 
-            if (mesh.expressID == IdToExport)
+            if (mesh.expressID == IdToExport && ShouldWriteFiles())
             {
                 DumpFlatMesh(mesh, geometryLoader, "TEST_GEOM.obj");
             }
