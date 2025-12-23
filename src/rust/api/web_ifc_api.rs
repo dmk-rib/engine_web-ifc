@@ -167,7 +167,11 @@ pub struct IfcGeometry {
 
 impl IfcGeometry {
     pub fn GetVertexData(&self) -> u32 {
-        0
+        if self.vertex_data.is_empty() {
+            return 0;
+        }
+        let ptr = self.vertex_data.as_ptr() as usize;
+        u32::try_from(ptr).unwrap_or(0)
     }
 
     pub fn GetVertexDataSize(&self) -> u32 {
@@ -175,7 +179,11 @@ impl IfcGeometry {
     }
 
     pub fn GetIndexData(&self) -> u32 {
-        0
+        if self.index_data.is_empty() {
+            return 0;
+        }
+        let ptr = self.index_data.as_ptr() as usize;
+        u32::try_from(ptr).unwrap_or(0)
     }
 
     pub fn GetIndexDataSize(&self) -> u32 {
@@ -643,6 +651,8 @@ pub struct IfcAPI {
     state: SyncArc<Mutex<IfcAPIState>>,
     wasm_path: SyncArc<Mutex<String>>,
     is_wasm_path_absolute: SyncArc<Mutex<bool>>,
+    model_schema_list: SyncArc<Mutex<Vec<usize>>>,
+    model_schema_name_list: SyncArc<Mutex<Vec<String>>>,
     pub properties: Properties,
 }
 
@@ -653,6 +663,8 @@ impl Default for IfcAPI {
             state: state.clone(),
             wasm_path: SyncArc::new(Mutex::new(String::new())),
             is_wasm_path_absolute: SyncArc::new(Mutex::new(false)),
+            model_schema_list: SyncArc::new(Mutex::new(Vec::new())),
+            model_schema_name_list: SyncArc::new(Mutex::new(Vec::new())),
             properties: Properties::new(state),
         }
     }
@@ -685,13 +697,28 @@ impl IfcAPI {
         let mut state = self.state.lock().expect("state lock");
         state.next_model_id += 1;
         let model_id = state.next_model_id;
+        let schema_name = "IFC4".to_string();
+        let schema_id =
+            lookup_schema_id(&schema_name).ok_or(IfcApiError::InvalidInput("schema"))?;
         state.models.insert(
             model_id,
             Model {
-                schema: "IFC4".to_string(),
+                schema: schema_name.clone(),
                 ..Model::default()
             },
         );
+        if let Ok(mut list) = self.model_schema_list.lock() {
+            if list.len() <= model_id as usize {
+                list.resize(model_id as usize + 1, 0);
+            }
+            list[model_id as usize] = schema_id;
+        }
+        if let Ok(mut list) = self.model_schema_name_list.lock() {
+            if list.len() <= model_id as usize {
+                list.resize(model_id as usize + 1, String::new());
+            }
+            list[model_id as usize] = schema_name;
+        }
         Ok(model_id)
     }
 
@@ -718,13 +745,27 @@ impl IfcAPI {
         let mut state = self.state.lock().expect("state lock");
         state.next_model_id += 1;
         let model_id = state.next_model_id;
+        let schema_id =
+            lookup_schema_id(&new_model.schema).ok_or(IfcApiError::InvalidInput("schema"))?;
         state.models.insert(
             model_id,
             Model {
-                schema: new_model.schema,
+                schema: new_model.schema.clone(),
                 ..Model::default()
             },
         );
+        if let Ok(mut list) = self.model_schema_list.lock() {
+            if list.len() <= model_id as usize {
+                list.resize(model_id as usize + 1, 0);
+            }
+            list[model_id as usize] = schema_id;
+        }
+        if let Ok(mut list) = self.model_schema_name_list.lock() {
+            if list.len() <= model_id as usize {
+                list.resize(model_id as usize + 1, String::new());
+            }
+            list[model_id as usize] = new_model.schema;
+        }
         Ok(model_id)
     }
 
@@ -864,28 +905,45 @@ impl IfcAPI {
         Ok(model.max_express_id)
     }
 
-    pub fn CreateIfcEntity(&self, _model_id: i32, _type: i32) -> Value {
-        Value::Object(Map::new())
+    /// C++ overload mapping: CreateIfcEntity(model_id, type_code, ...args)
+    pub fn CreateIfcEntity(&self, _model_id: i32, type_code: i32, args: Vec<Value>) -> Value {
+        let mut map = Map::new();
+        map.insert("expressID".to_string(), Value::Number(0));
+        map.insert("type".to_string(), Value::Number(type_code.into()));
+        map.insert("arguments".to_string(), Value::Array(args));
+        Value::Object(map)
     }
 
-    pub fn CreateIFCGloballyUniqueId(&self) -> String {
-        crate::uuid::Uuid::new_v4().to_string()
+    pub fn CreateIFCGloballyUniqueId(&self, _model_id: i32) -> Value {
+        let guid = crate::uuid::Uuid::new_v4().to_string();
+        let mut map = Map::new();
+        map.insert(
+            "type".to_string(),
+            Value::Number(IFCGLOBALLYUNIQUEID as i64),
+        );
+        map.insert("value".to_string(), Value::String(guid));
+        Value::Object(map)
     }
 
-    pub fn CreateIfcType(&self, type_code: i32) -> Value {
-        Value::Number(type_code.into())
+    pub fn CreateIfcType(&self, _model_id: i32, type_code: i32, value: Value) -> Value {
+        let mut map = Map::new();
+        map.insert("type".to_string(), Value::Number(type_code.into()));
+        map.insert("value".to_string(), value);
+        Value::Object(map)
     }
 
     pub fn GetNameFromTypeCode(&self, type_code: i32) -> String {
-        format!("{type_code}")
+        type_name_from_code(type_code)
+            .map(ToString::to_string)
+            .unwrap_or_else(|| format!("{type_code}"))
     }
 
-    pub fn GetTypeCodeFromName(&self, _type_name: &str) -> i32 {
-        0
+    pub fn GetTypeCodeFromName(&self, type_name: &str) -> i32 {
+        type_code_from_name(type_name).unwrap_or_default()
     }
 
-    pub fn IsIfcElement(&self, _type_code: i32) -> bool {
-        true
+    pub fn IsIfcElement(&self, type_code: i32) -> bool {
+        is_ifc_element(type_code)
     }
 
     pub fn GetIfcEntityList(&self, model_id: i32) -> Result<Vec<i32>, IfcApiError> {
@@ -1169,7 +1227,15 @@ impl IfcAPI {
             .get("expressID")
             .and_then(|value| value.as_i64())
             .ok_or(IfcApiError::InvalidInput("expressID"))?;
+        let type_code = line
+            .get("type")
+            .and_then(|value| value.as_i64())
+            .ok_or(IfcApiError::InvalidInput("type"))?;
         model.lines.insert(express_id as i32, line);
+        model.line_types.insert(express_id as i32, type_code as i32);
+        if express_id as i32 > model.max_express_id {
+            model.max_express_id = express_id as i32;
+        }
         Ok(())
     }
 }

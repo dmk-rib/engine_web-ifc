@@ -338,23 +338,22 @@ pub fn GetWorldTransformMatrix(model_id: i32, _placement_express_id: u32) -> Vec
     state.api.GetWorldTransformMatrix(model_id)
 }
 
-pub fn GetLineIDsWithType(model_id: i32, type_code: i32) -> Vec<i32> {
+pub fn GetLineIDsWithType(model_id: i32, type_codes: &[i32]) -> Vec<i32> {
     let state = state().lock().expect("wasm state");
-    state
-        .api
-        .GetLineIDsWithType(model_id, type_code)
-        .map(|vec| vec.0)
-        .unwrap_or_default()
-}
-
-pub fn GetLineIDsWithTypes(model_id: i32, type_codes: &[i32]) -> Vec<i32> {
-    let state = state().lock().expect("wasm state");
-    let mut ids = Vec::new();
-    for type_code in type_codes {
-        if let Ok(vec) = state.api.GetLineIDsWithType(model_id, *type_code) {
-            ids.extend(vec.0);
-        }
-    }
+    let Some(lines) = state.lines.get(&(model_id as u32)) else {
+        return Vec::new();
+    };
+    let mut ids: Vec<i32> = lines
+        .iter()
+        .filter_map(|(express_id, record)| {
+            if type_codes.contains(&(record.type_code as i32)) {
+                Some(*express_id as i32)
+            } else {
+                None
+            }
+        })
+        .collect();
+    ids.sort_unstable();
     ids
 }
 
@@ -392,17 +391,31 @@ pub fn GetInversePropertyForItem(
 
 pub fn ValidateExpressID(model_id: i32, express_id: i32) -> bool {
     let state = state().lock().expect("wasm state");
-    state.api.GetLineType(model_id, express_id).unwrap_or(0) != 0
+    let Some(lines) = state.lines.get(&(model_id as u32)) else {
+        return false;
+    };
+    lines.contains_key(&(express_id as u32))
 }
 
 pub fn GetNextExpressID(model_id: i32, _express_id: i32) -> i32 {
+    let express_id = _express_id;
     let state = state().lock().expect("wasm state");
-    state.api.GetNextExpressID(model_id).unwrap_or_default()
+    let Some(lines) = state.lines.get(&(model_id as u32)) else {
+        return 0;
+    };
+    let mut ids: Vec<i32> = lines.keys().map(|id| *id as i32).collect();
+    ids.sort_unstable();
+    ids.into_iter().find(|id| *id > express_id).unwrap_or(0)
 }
 
-pub fn GetAllLines(model_id: i32) -> Vec<Value> {
+pub fn GetAllLines(model_id: i32) -> Vec<i32> {
     let state = state().lock().expect("wasm state");
-    state.api.GetAllLines(model_id).unwrap_or_default()
+    let Some(lines) = state.lines.get(&(model_id as u32)) else {
+        return Vec::new();
+    };
+    let mut ids: Vec<i32> = lines.keys().map(|id| *id as i32).collect();
+    ids.sort_unstable();
+    ids
 }
 
 pub fn ReadValue(model_id: u32, token: IfcTokenType) -> Value {
@@ -474,6 +487,9 @@ pub fn GetArgs(model_id: u32, in_object: bool, in_list: bool) -> Value {
 
 pub fn WriteHeaderLine(model_id: u32, type_code: u32, parameters: Value) -> bool {
     let mut state = state().lock().expect("wasm state");
+    if !state.api.IsModelOpen(model_id as i32) {
+        return false;
+    }
     let args = normalize_argument(&parameters);
     let record = HeaderLine {
         type_code,
@@ -492,6 +508,9 @@ pub fn RemoveLine(model_id: u32, express_id: u32) {
 
 pub fn WriteLine(model_id: u32, express_id: u32, type_code: u32, parameters: Value) -> bool {
     let mut state = state().lock().expect("wasm state");
+    if !state.api.IsModelOpen(model_id as i32) {
+        return false;
+    }
     let args = normalize_argument(&parameters);
     let record = LineRecord {
         type_code,
@@ -539,7 +558,10 @@ pub fn GetHeaderLine(model_id: u32, header_type: u32) -> Value {
 
     let mut obj = Map::new();
     obj.insert("ID".to_string(), Value::Number(index as i64));
-    obj.insert("type".to_string(), Value::Number(header_type as i64));
+    obj.insert(
+        "type".to_string(),
+        Value::String(state.api.GetNameFromTypeCode(header_type as i32)),
+    );
     obj.insert("arguments".to_string(), arguments);
     Value::Object(obj)
 }
@@ -599,9 +621,14 @@ pub fn GetVersion() -> String {
     state.api.GetVersion()
 }
 
-pub fn GenerateGuid(_model_id: i32) -> String {
+pub fn GenerateGuid(model_id: i32) -> String {
     let state = state().lock().expect("wasm state");
-    state.api.CreateIFCGloballyUniqueId()
+    let value = state.api.CreateIFCGloballyUniqueId(model_id);
+    value
+        .get("value")
+        .and_then(|entry| entry.as_str())
+        .unwrap_or_default()
+        .to_string()
 }
 
 pub fn GetMaxExpressID(model_id: i32) -> i32 {
@@ -626,9 +653,9 @@ pub fn SetLogLevel(level: u8) {
 }
 
 pub fn ResetCache(model_id: i32) {
-    let mut state = state().lock().expect("wasm state");
+    let state = state().lock().expect("wasm state");
     state.api.ResetCache();
-    state.lines.remove(&(model_id as u32));
+    let _ = model_id;
 }
 
 pub fn CreateAABB() -> AABB {

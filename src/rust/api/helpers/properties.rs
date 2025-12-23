@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::sync::{Arc, Mutex};
 
+use crate::api::ifc_schema::type_name_from_code;
 use crate::api::ifc_schema::{
     IFCPROJECT, IFCRELAGGREGATES, IFCRELASSOCIATESMATERIAL, IFCRELCONTAINEDINSPATIALSTRUCTURE,
     IFCRELDEFINESBYPROPERTIES, IFCRELDEFINESBYTYPE,
@@ -82,6 +83,33 @@ pub struct Properties {
     state: Arc<Mutex<IfcAPIState>>,
 }
 
+#[derive(Clone)]
+pub enum Ids {
+    One(i32),
+    Many(Vec<i32>),
+}
+
+impl From<i32> for Ids {
+    fn from(value: i32) -> Self {
+        Ids::One(value)
+    }
+}
+
+impl From<Vec<i32>> for Ids {
+    fn from(value: Vec<i32>) -> Self {
+        Ids::Many(value)
+    }
+}
+
+impl Ids {
+    fn into_vec(self) -> Vec<i32> {
+        match self {
+            Ids::One(value) => vec![value],
+            Ids::Many(values) => values,
+        }
+    }
+}
+
 impl Properties {
     pub fn new(state: Arc<Mutex<IfcAPIState>>) -> Self {
         Self { state }
@@ -134,11 +162,16 @@ impl Properties {
     pub async fn set_property_sets(
         &self,
         model_id: i32,
-        element_id: Vec<i32>,
-        pset_id: Vec<i32>,
+        element_id: impl Into<Ids>,
+        pset_id: impl Into<Ids>,
     ) -> Result<bool, IfcApiError> {
         let names = prop_names();
-        self.set_item_properties(model_id, element_id, pset_id, &names["psets"])
+        self.set_item_properties(
+            model_id,
+            element_id.into().into_vec(),
+            pset_id.into().into_vec(),
+            &names["psets"],
+        )
     }
 
     pub fn get_type_properties(
@@ -195,11 +228,16 @@ impl Properties {
     pub async fn set_materials_properties(
         &self,
         model_id: i32,
-        element_id: Vec<i32>,
-        material_id: Vec<i32>,
+        element_id: impl Into<Ids>,
+        material_id: impl Into<Ids>,
     ) -> Result<bool, IfcApiError> {
         let names = prop_names();
-        self.set_item_properties(model_id, element_id, material_id, &names["materials"])
+        self.set_item_properties(
+            model_id,
+            element_id.into().into_vec(),
+            material_id.into().into_vec(),
+            &names["materials"],
+        )
     }
 
     pub async fn get_spatial_structure(
@@ -295,21 +333,7 @@ impl Properties {
         tree_chunks: &HashMap<i32, Vec<i32>>,
         include_properties: bool,
     ) -> Result<(), IfcApiError> {
-        let names = prop_names();
-        self.get_children(
-            model_id,
-            node,
-            tree_chunks,
-            &names["aggregates"],
-            include_properties,
-        )?;
-        self.get_children(
-            model_id,
-            node,
-            tree_chunks,
-            &names["spatial"],
-            include_properties,
-        )?;
+        self.get_children(model_id, node, tree_chunks, include_properties)?;
         Ok(())
     }
 
@@ -318,7 +342,6 @@ impl Properties {
         model_id: i32,
         node: &mut Node,
         tree_chunks: &HashMap<i32, Vec<i32>>,
-        prop_names: &PropNames,
         include_properties: bool,
     ) -> Result<(), IfcApiError> {
         let children = match tree_chunks.get(&node.express_id) {
@@ -387,18 +410,28 @@ impl Properties {
             return Ok(false);
         }
         let relations = self.get_line_ids_with_type(model_id, props_name.name)?;
-        let mut rels = Vec::new();
+        let mut rels: Vec<Value> = Vec::new();
+        let mut found_rel = 0usize;
         for rel_id in relations.0 {
             let rel = self.get_line(model_id, rel_id, false, false, None)?;
             let relating = rel.get(props_name.relating).and_then(extract_id);
             if let Some(relating) = relating {
                 if prop_id.contains(&relating) {
                     rels.push(rel);
+                    found_rel += 1;
+                    if found_rel == prop_id.len() {
+                        break;
+                    }
                 }
             }
         }
         for mut element in elements {
-            for rel in &rels {
+            let element_express_id = element
+                .get("expressID")
+                .and_then(Value::as_i64)
+                .ok_or(IfcApiError::InvalidInput("expressID"))?
+                as i32;
+            for rel in &mut rels {
                 let rel_id = rel
                     .get("expressID")
                     .and_then(Value::as_i64)
@@ -418,8 +451,29 @@ impl Properties {
                 }
                 element
                     .as_object_mut()
-                    .unwrap_or_else(|| panic!("element not object"))
+                    .ok_or(IfcApiError::InvalidInput("element"))?
                     .insert(props_name.key.to_string(), Value::Array(list));
+
+                let mut related_list = rel
+                    .get(props_name.related)
+                    .and_then(|value| value.as_array().cloned())
+                    .unwrap_or_default();
+                if !related_list
+                    .iter()
+                    .any(|entry| extract_id(entry) == Some(element_express_id))
+                {
+                    related_list.push(Value::Object(Map::from_iter([
+                        ("type".to_string(), Value::Number(5.into())),
+                        (
+                            "value".to_string(),
+                            Value::Number((element_express_id).into()),
+                        ),
+                    ])));
+                    rel.as_object_mut()
+                        .ok_or(IfcApiError::InvalidInput("relation"))?
+                        .insert(props_name.related.to_string(), Value::Array(related_list));
+                    self.write_line(model_id, rel.clone())?;
+                }
             }
             self.write_line(model_id, element)?;
         }
@@ -479,7 +533,9 @@ impl Properties {
     }
 
     fn get_name_from_type_code(&self, type_code: i32) -> String {
-        format!("{type_code}")
+        type_name_from_code(type_code)
+            .map(ToString::to_string)
+            .unwrap_or_else(|| format!("{type_code}"))
     }
 
     fn get_model_schema(&self, model_id: i32) -> Result<String, IfcApiError> {
