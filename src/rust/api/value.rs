@@ -34,10 +34,55 @@ impl Value {
         }
     }
 
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            Value::Bool(value) => Some(*value),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Value::String(value) => Some(value),
+            _ => None,
+        }
+    }
+
     pub fn as_object_mut(&mut self) -> Option<&mut Map> {
         match self {
             Value::Object(map) => Some(map),
             _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Null => write!(f, "null"),
+            Value::Bool(value) => write!(f, "{value}"),
+            Value::Number(value) => write!(f, "{value}"),
+            Value::String(value) => write!(f, "{value}"),
+            Value::Array(values) => {
+                write!(f, "[")?;
+                for (index, value) in values.iter().enumerate() {
+                    if index > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{value}")?;
+                }
+                write!(f, "]")
+            }
+            Value::Object(map) => {
+                write!(f, "{{")?;
+                for (index, (key, value)) in map.iter().enumerate() {
+                    if index > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{key}: {value}")?;
+                }
+                write!(f, "}}")
+            }
         }
     }
 }

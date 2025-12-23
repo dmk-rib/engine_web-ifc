@@ -10,6 +10,7 @@ fn main() {
 
     let mut output = String::new();
     let mut seen_consts = HashSet::new();
+    let mut const_entries: Vec<(String, u32)> = Vec::new();
     for line in content.lines() {
         let trimmed = line.trim();
         if !trimmed.starts_with("export const ") {
@@ -27,8 +28,17 @@ fn main() {
         if let Ok(value) = value_str.parse::<u64>() {
             if seen_consts.insert(name.to_string()) {
                 output.push_str(&format!("pub const {name}: u32 = {value}u32;\n"));
+                const_entries.push((name.to_string(), value as u32));
             }
         }
+    }
+
+    if !const_entries.is_empty() {
+        output.push_str("\npub const IFC_SCHEMA_CONSTANTS: &[(&str, u32)] = &[\n");
+        for (name, value) in &const_entries {
+            output.push_str(&format!("    (\"{name}\", {value}u32),\n"));
+        }
+        output.push_str("];\n");
     }
 
     let mut seen_types = HashSet::new();
@@ -75,6 +85,53 @@ fn main() {
         };
         output.push_str(&format!("pub type {name} = {target};\n"));
         rest = &rest[name.len()..];
+    }
+
+    let mut schema_names: Vec<Vec<String>> = Vec::new();
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("SchemaNames[") {
+            continue;
+        }
+        let Some((left, right)) = trimmed.split_once('=') else {
+            continue;
+        };
+        let index = left
+            .split(&['[', ']'][..])
+            .nth(1)
+            .and_then(|value| value.parse::<usize>().ok());
+        let Some(index) = index else {
+            continue;
+        };
+        let rhs = right.trim().trim_end_matches(';');
+        let start = rhs.find('[');
+        let end = rhs.rfind(']');
+        let (Some(start), Some(end)) = (start, end) else {
+            continue;
+        };
+        let inner = &rhs[start + 1..end];
+        let names = inner
+            .split(',')
+            .map(|entry| entry.trim().trim_matches('\'').trim_matches('"'))
+            .filter(|entry| !entry.is_empty())
+            .map(|entry| entry.to_string())
+            .collect::<Vec<_>>();
+        if schema_names.len() <= index {
+            schema_names.resize_with(index + 1, Vec::new);
+        }
+        schema_names[index] = names;
+    }
+
+    if !schema_names.is_empty() {
+        output.push_str("\npub const IFC_SCHEMA_NAMES: &[&[&str]] = &[\n");
+        for names in &schema_names {
+            output.push_str("    &[\n");
+            for name in names {
+                output.push_str(&format!("        \"{name}\",\n"));
+            }
+            output.push_str("    ],\n");
+        }
+        output.push_str("];\n");
     }
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR"));

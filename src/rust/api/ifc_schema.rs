@@ -90,4 +90,43 @@ pub static ToRawLineData: OnceLock<Value> = OnceLock::new();
 pub static TypeInitialisers: OnceLock<Value> = OnceLock::new();
 pub static SchemaNames: OnceLock<Vec<Vec<String>>> = OnceLock::new();
 
+pub fn schema_names() -> &'static Vec<Vec<String>> {
+    SchemaNames.get_or_init(|| {
+        IFC_SCHEMA_NAMES
+            .iter()
+            .map(|names| names.iter().map(|name| name.to_string()).collect())
+            .collect()
+    })
+}
+
+pub fn lookup_schema_id(schema_name: &str) -> Option<usize> {
+    IFC_SCHEMA_NAMES
+        .iter()
+        .enumerate()
+        .find(|(_, names)| {
+            names
+                .iter()
+                .any(|name| name.eq_ignore_ascii_case(schema_name))
+        })
+        .map(|(index, _)| index)
+}
+
+pub fn type_name_from_code(type_code: i32) -> Option<&'static str> {
+    IFC_SCHEMA_CONSTANTS
+        .iter()
+        .find(|(_, value)| *value as i32 == type_code)
+        .map(|(name, _)| *name)
+}
+
+pub fn type_code_from_name(type_name: &str) -> Option<i32> {
+    IFC_SCHEMA_CONSTANTS
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case(type_name))
+        .map(|(_, value)| *value as i32)
+}
+
+pub fn is_ifc_element(type_code: i32) -> bool {
+    type_name_from_code(type_code).is_some()
+}
+
 include!(concat!(env!("OUT_DIR"), "/ifc_schema_generated.rs"));
