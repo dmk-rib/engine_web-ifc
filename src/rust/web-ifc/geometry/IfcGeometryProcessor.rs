@@ -320,6 +320,10 @@ impl<'a> IfcGeometryProcessor<'a> {
         mesh
     }
 
+    pub fn get_loader(&self) -> &IfcGeometryLoader<'a> {
+        &self.geometry_loader
+    }
+
     pub fn set_transformation(&mut self, val: [f64; 16]) {
         let v1 = DVec4::new(val[0], val[1], val[2], val[3]);
         let v2 = DVec4::new(val[4], val[5], val[6], val[7]);

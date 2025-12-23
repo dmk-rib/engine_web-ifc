@@ -515,6 +515,11 @@ impl<'a> IfcGeometryLoader<'a> {
         result
     }
 
+    // C++ default argument mapping: GetLocalPlacement(expressID).
+    pub fn get_local_placement_default(&self, express_id: u32) -> DMat4 {
+        self.get_local_placement(express_id, DVec3::ONE)
+    }
+
     pub fn get_cartesian_point_3d(&self, _express_id: u32) -> DVec3 {
         if let Some(point) = self.cartesian_point_3d_cache.borrow().get(&_express_id) {
             return *point;
@@ -650,6 +655,11 @@ impl<'a> IfcGeometryLoader<'a> {
         };
         self.compute_curve(_express_id, &mut curve, &params);
         curve
+    }
+
+    // C++ default argument mapping: GetCurve(expressID, dimensions, edge=false).
+    pub fn get_curve_default(&self, express_id: u32, dimensions: u8) -> IfcCurve {
+        self.get_curve(express_id, dimensions, false)
     }
 
     pub fn compute_curve_length(&self, _curve: &IfcCurve) -> f64 {
@@ -1408,6 +1418,11 @@ impl<'a> IfcGeometryLoader<'a> {
         }
     }
 
+    // C++ default argument mapping: GetCrossSections3D(expressID, scaled=false, coordination=identity).
+    pub fn get_cross_sections_3d_default(&self, express_id: u32) -> IfcCrossSections {
+        self.get_cross_sections_3d(express_id, false, DMat4::IDENTITY)
+    }
+
     pub fn get_placements_on_curve_points(
         &self,
         _curve_id: u32,
@@ -1615,6 +1630,16 @@ impl<'a> IfcGeometryLoader<'a> {
         }
 
         alignment
+    }
+
+    // C++ default argument mapping: GetAlignment(expressID, alignment=default, transform=identity, sourceExpressID=-1).
+    pub fn get_alignment_default(&self, express_id: u32) -> IfcAlignment {
+        self.get_alignment(
+            express_id,
+            IfcAlignment::default(),
+            DMat4::IDENTITY,
+            u32::MAX,
+        )
     }
 
     pub fn get_color_into(&self, _express_id: u32, _output_color: &DVec4) -> bool {
