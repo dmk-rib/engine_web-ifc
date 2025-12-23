@@ -4,18 +4,22 @@ use std::collections::HashMap;
 
 use glam::{DMat4, DVec4};
 
+use crate::web_ifc::geometry::operations::boolean_utils::fuzzy_bools;
+use crate::web_ifc::geometry::operations::boolean_utils::geometry as bool_geometry;
+use crate::web_ifc::geometry::operations::geometryutils;
 use crate::web_ifc::geometry::representation::geometry::{
     normalize_ifc, IfcBound3D, IfcComposedMesh, IfcFlatMesh, IfcSurface,
 };
 use crate::web_ifc::geometry::representation::ifc_geometry::IfcGeometry;
 use crate::web_ifc::geometry::IfcGeometryLoader;
-use crate::web_ifc::geometry::operations::boolean_utils::fuzzy_bools;
-use crate::web_ifc::geometry::operations::boolean_utils::geometry as bool_geometry;
-use crate::web_ifc::geometry::operations::geometryutils;
 use crate::web_ifc::parsing::ifc_loader::IfcLoader;
 use crate::web_ifc::parsing::ifc_token_type::IfcTokenType;
+use crate::web_ifc::schema::ifc_schema::{
+    IFCBSPLINESURFACE, IFCBSPLINESURFACEWITHKNOTS, IFCCYLINDRICALSURFACE, IFCINDEXEDPOLYGONALFACE,
+    IFCINDEXEDPOLYGONALFACEWITHVOIDS, IFCPLANE, IFCRATIONALBSPLINESURFACEWITHKNOTS,
+    IFCSURFACEOFLINEAREXTRUSION, IFCSURFACEOFREVOLUTION,
+};
 use crate::web_ifc::schema::ifc_schema_manager::IfcSchemaManager;
-use crate::web_ifc::schema::ifc_schema::{IFCBSPLINESURFACE, IFCBSPLINESURFACEWITHKNOTS, IFCCYLINDRICALSURFACE, IFCINDEXEDPOLYGONALFACE, IFCINDEXEDPOLYGONALFACEWITHVOIDS, IFCPLANE, IFCRATIONALBSPLINESURFACEWITHKNOTS, IFCSURFACEOFREVOLUTION, IFCSURFACEOFLINEAREXTRUSION};
 
 #[derive(Clone, Debug)]
 pub struct IfcGeometrySettings {
@@ -133,8 +137,7 @@ impl BooleanManager {
                     );
 
                     if op == "DIFFERENCE" {
-                        first_operator =
-                            self.subtract(first_operator, second_operator);
+                        first_operator = self.subtract(first_operator, second_operator);
                     } else if op == "UNION" {
                         first_operator = self.union(first_operator, second_operator);
                     }
@@ -173,11 +176,13 @@ impl BooleanManager {
         new_geom.base.base.num_points = geom.num_points;
         new_geom.base.base.num_faces = geom.num_faces;
         for (id, plane) in geom.planes.iter().enumerate() {
-            new_geom.base.base.planes.push(crate::web_ifc::geometry::operations::bim_geometry::plane::Plane {
-                id,
-                normal: plane.normal,
-                distance: plane.distance,
-            });
+            new_geom.base.base.planes.push(
+                crate::web_ifc::geometry::operations::bim_geometry::plane::Plane {
+                    id,
+                    normal: plane.normal,
+                    distance: plane.distance,
+                },
+            );
         }
         new_geom.base.base.has_planes = geom.has_planes;
         new_geom
@@ -225,7 +230,11 @@ impl<'a> IfcGeometryProcessor<'a> {
         plane_refit_iterations: f64,
         boolean_union_threshold: f64,
     ) -> Self {
-        geometryutils::set_epsilons(tolerance_scalar_equality, plane_refit_iterations, boolean_union_threshold);
+        geometryutils::set_epsilons(
+            tolerance_scalar_equality,
+            plane_refit_iterations,
+            boolean_union_threshold,
+        );
         let geometry_loader = IfcGeometryLoader::new(
             loader,
             schema_manager,
@@ -267,7 +276,11 @@ impl<'a> IfcGeometryProcessor<'a> {
             .or_insert_with(IfcGeometry::default)
     }
 
-    pub fn get_flat_mesh(&mut self, express_id: u32, apply_linear_scaling_factor: bool) -> IfcFlatMesh {
+    pub fn get_flat_mesh(
+        &mut self,
+        express_id: u32,
+        apply_linear_scaling_factor: bool,
+    ) -> IfcFlatMesh {
         let mut flat_mesh = IfcFlatMesh::default();
         flat_mesh.express_id = express_id;
 
@@ -368,7 +381,9 @@ impl<'a> IfcGeometryProcessor<'a> {
                     return;
                 }
 
-                let mut geometry = crate::web_ifc::geometry::representation::geometry::IfcPlacedGeometry::default();
+                let mut geometry =
+                    crate::web_ifc::geometry::representation::geometry::IfcPlacedGeometry::default(
+                    );
 
                 if !self.is_coordinated && self.settings.coordinate_to_origin {
                     if geom.base.base.num_points > 0 {
@@ -438,7 +453,8 @@ impl<'a> IfcGeometryProcessor<'a> {
         let line_type = self.loader.get_line_type(express_id);
 
         bounds.push(IfcBound3D {
-            bound_type: crate::web_ifc::geometry::representation::geometry::IfcBoundType::OuterBound,
+            bound_type:
+                crate::web_ifc::geometry::representation::geometry::IfcBoundType::OuterBound,
             orientation: true,
             curve: Default::default(),
         });
@@ -449,7 +465,7 @@ impl<'a> IfcGeometryProcessor<'a> {
                 let index_ids = self.loader.get_set_argument();
 
                 for index_id in index_ids {
-                    let index = self.loader.get_int_argument(index_id) as usize;
+                    let index = self.loader.get_int_argument_at(index_id) as usize;
                     let point = points[index - 1];
                     bounds
                         .last_mut()
@@ -499,7 +515,9 @@ impl<'a> IfcGeometryProcessor<'a> {
                 let mut surface = IfcSurface::default();
                 self.loader.move_to_argument_offset(_express_id, 0);
                 let location_id = self.loader.get_ref_argument();
-                surface.transformation = self.geometry_loader.get_local_placement(location_id, glam::DVec3::ZERO);
+                surface.transformation = self
+                    .geometry_loader
+                    .get_local_placement(location_id, glam::DVec3::ZERO);
                 surface
             }
             IFCBSPLINESURFACE => {
@@ -514,7 +532,7 @@ impl<'a> IfcGeometryProcessor<'a> {
                 for set in ctrl_point_groups {
                     let mut list = Vec::new();
                     for token in set {
-                        let point_id = self.loader.get_ref_argument(token);
+                        let point_id = self.loader.get_ref_argument_at(token);
                         list.push(self.geometry_loader.get_cartesian_point_3d(point_id));
                     }
                     ctrl_pts.push(list);
@@ -554,7 +572,7 @@ impl<'a> IfcGeometryProcessor<'a> {
                 for set in ctrl_point_groups {
                     let mut list = Vec::new();
                     for token in set {
-                        let point_id = self.loader.get_ref_argument(token);
+                        let point_id = self.loader.get_ref_argument_at(token);
                         list.push(self.geometry_loader.get_cartesian_point_3d(point_id));
                     }
                     ctrl_pts.push(list);
@@ -578,16 +596,16 @@ impl<'a> IfcGeometryProcessor<'a> {
                 let indexes_set_v = self.loader.get_set_argument();
 
                 for token in knot_set_u {
-                    u_mult.push(self.loader.get_int_argument(token) as u32);
+                    u_mult.push(self.loader.get_int_argument_at(token) as u32);
                 }
                 for token in knot_set_v {
-                    v_mult.push(self.loader.get_int_argument(token) as u32);
+                    v_mult.push(self.loader.get_int_argument_at(token) as u32);
                 }
                 for token in indexes_set_u {
-                    u_knots.push(self.loader.get_double_argument(token));
+                    u_knots.push(self.loader.get_double_argument_at(token));
                 }
                 for token in indexes_set_v {
-                    v_knots.push(self.loader.get_double_argument(token));
+                    v_knots.push(self.loader.get_double_argument_at(token));
                 }
 
                 surface.b_spline_surface.active = true;
@@ -618,7 +636,7 @@ impl<'a> IfcGeometryProcessor<'a> {
                 for set in ctrl_point_groups {
                     let mut list = Vec::new();
                     for token in set {
-                        let point_id = self.loader.get_ref_argument(token);
+                        let point_id = self.loader.get_ref_argument_at(token);
                         list.push(self.geometry_loader.get_cartesian_point_3d(point_id));
                     }
                     ctrl_pts.push(list);
@@ -644,21 +662,21 @@ impl<'a> IfcGeometryProcessor<'a> {
                 for set in weight_groups {
                     let mut list = Vec::new();
                     for token in set {
-                        list.push(self.loader.get_double_argument(token));
+                        list.push(self.loader.get_double_argument_at(token));
                     }
                     weight_pts.push(list);
                 }
                 for token in knot_set_u {
-                    u_mult.push(self.loader.get_int_argument(token) as u32);
+                    u_mult.push(self.loader.get_int_argument_at(token) as u32);
                 }
                 for token in knot_set_v {
-                    v_mult.push(self.loader.get_int_argument(token) as u32);
+                    v_mult.push(self.loader.get_int_argument_at(token) as u32);
                 }
                 for token in indexes_set_u {
-                    u_knots.push(self.loader.get_double_argument(token));
+                    u_knots.push(self.loader.get_double_argument_at(token));
                 }
                 for token in indexes_set_v {
-                    v_knots.push(self.loader.get_double_argument(token));
+                    v_knots.push(self.loader.get_double_argument_at(token));
                 }
 
                 surface.b_spline_surface.active = true;
@@ -676,7 +694,9 @@ impl<'a> IfcGeometryProcessor<'a> {
                 let mut surface = IfcSurface::default();
                 self.loader.move_to_argument_offset(_express_id, 0);
                 let location_id = self.loader.get_ref_argument();
-                surface.transformation = self.geometry_loader.get_local_placement(location_id, glam::DVec3::ZERO);
+                surface.transformation = self
+                    .geometry_loader
+                    .get_local_placement(location_id, glam::DVec3::ZERO);
                 self.loader.move_to_argument_offset(_express_id, 1);
                 let radius = self.loader.get_double_argument();
                 surface.cylinder_surface.active = true;
@@ -692,14 +712,16 @@ impl<'a> IfcGeometryProcessor<'a> {
                 if self.loader.get_token_type() == IfcTokenType::Ref {
                     self.loader.step_back();
                     let placement_id = self.loader.get_ref_argument();
-                    surface.transformation =
-                        self.geometry_loader.get_local_placement(placement_id, glam::DVec3::ZERO);
+                    surface.transformation = self
+                        .geometry_loader
+                        .get_local_placement(placement_id, glam::DVec3::ZERO);
                 }
                 self.loader.move_to_argument_offset(_express_id, 2);
                 let location_id = self.loader.get_ref_argument();
                 surface.revolution_surface.active = true;
-                surface.revolution_surface.direction =
-                    self.geometry_loader.get_local_placement(location_id, glam::DVec3::ZERO);
+                surface.revolution_surface.direction = self
+                    .geometry_loader
+                    .get_local_placement(location_id, glam::DVec3::ZERO);
                 surface.revolution_surface.profile = profile;
                 surface
             }
@@ -723,8 +745,9 @@ impl<'a> IfcGeometryProcessor<'a> {
                 surface.extrusion_surface.direction = direction;
                 self.loader.move_to_argument_offset(_express_id, 1);
                 let location_id = self.loader.get_ref_argument();
-                surface.transformation =
-                    self.geometry_loader.get_local_placement(location_id, glam::DVec3::ZERO);
+                surface.transformation = self
+                    .geometry_loader
+                    .get_local_placement(location_id, glam::DVec3::ZERO);
                 surface
             }
             _ => IfcSurface::default(),

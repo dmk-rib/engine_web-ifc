@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_imports)]
+#![cfg(feature = "web_ifc")]
 
 #[path = "dumpToThree.rs"]
 pub mod dump_to_three;

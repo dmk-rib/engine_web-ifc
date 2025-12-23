@@ -1,7 +1,6 @@
-//! Auto-generated Rust stub mirroring `CMakeLists.txt`.
-//!
-//! TODO: Replace stub with a full, semantics-preserving Rust implementation.
+//! Rust mirror of the CMake configuration used by the C++ build.
 
-#![allow(dead_code, unused_variables)]
+#![allow(dead_code)]
 
-// Placeholder for ported code.
+/// The CMakeLists.txt content for the native C++ build.
+pub const CMAKE_LISTS: &str = include_str!("../cpp/CMakeLists.txt");

@@ -13,7 +13,9 @@ use crate::web_ifc::schema::ifc_schema as schema;
 
 use glam::{DMat3, DMat4, DVec2, DVec3, DVec4};
 
-use crate::web_ifc::geometry::representation::geometry::{IfcAlignment, IfcBound3D, IfcCrossSections, IfcProfile, IfcTrimmingSelect, TrimSense};
+use crate::web_ifc::geometry::representation::geometry::{
+    IfcAlignment, IfcBound3D, IfcCrossSections, IfcProfile, IfcTrimmingSelect, TrimSense,
+};
 use crate::web_ifc::geometry::representation::ifc_curve::IfcCurve;
 use crate::web_ifc::parsing::ifc_loader::IfcLoader;
 use crate::web_ifc::schema::ifc_schema_manager::IfcSchemaManager;
@@ -275,9 +277,12 @@ impl<'a> IfcGeometryLoader<'a> {
                     );
                 }
 
-                if offset_lateral.abs() > crate::web_ifc::geometry::representation::geometry::EPS_SMALL
-                    || offset_vertical.abs() > crate::web_ifc::geometry::representation::geometry::EPS_SMALL
-                    || offset_longitudinal.abs() > crate::web_ifc::geometry::representation::geometry::EPS_SMALL
+                if offset_lateral.abs()
+                    > crate::web_ifc::geometry::representation::geometry::EPS_SMALL
+                    || offset_vertical.abs()
+                        > crate::web_ifc::geometry::representation::geometry::EPS_SMALL
+                    || offset_longitudinal.abs()
+                        > crate::web_ifc::geometry::representation::geometry::EPS_SMALL
                 {
                     let local_translation = DMat4::from_translation(DVec3::new(
                         offset_longitudinal,
@@ -298,7 +303,9 @@ impl<'a> IfcGeometryLoader<'a> {
                 let z_id = self.loader.get_token_type();
                 if z_id == IfcTokenType::Ref {
                     self.loader.step_back();
-                    let tmp = self.get_cartesian_point_3d(self.loader.get_ref_argument()).normalize_or_zero();
+                    let tmp = self
+                        .get_cartesian_point_3d(self.loader.get_ref_argument())
+                        .normalize_or_zero();
                     if tmp.length() > 0.0 {
                         z_axis = tmp;
                     }
@@ -326,7 +333,9 @@ impl<'a> IfcGeometryLoader<'a> {
                 let z_id = self.loader.get_token_type();
                 if z_id == IfcTokenType::Ref {
                     self.loader.step_back();
-                    let tmp = self.get_cartesian_point_3d(self.loader.get_ref_argument()).normalize_or_zero();
+                    let tmp = self
+                        .get_cartesian_point_3d(self.loader.get_ref_argument())
+                        .normalize_or_zero();
                     if tmp.length() > 0.0 {
                         z_axis = tmp;
                     }
@@ -336,7 +345,9 @@ impl<'a> IfcGeometryLoader<'a> {
                 let x_id = self.loader.get_token_type();
                 if x_id == IfcTokenType::Ref {
                     self.loader.step_back();
-                    let tmp = self.get_cartesian_point_3d(self.loader.get_ref_argument()).normalize_or_zero();
+                    let tmp = self
+                        .get_cartesian_point_3d(self.loader.get_ref_argument())
+                        .normalize_or_zero();
                     if tmp.length() > 0.0 {
                         x_axis = tmp;
                     }
@@ -364,7 +375,9 @@ impl<'a> IfcGeometryLoader<'a> {
                 let x_id = self.loader.get_token_type();
                 if x_id == IfcTokenType::Ref {
                     self.loader.step_back();
-                    let tmp = self.get_cartesian_point_3d(self.loader.get_ref_argument()).normalize_or_zero();
+                    let tmp = self
+                        .get_cartesian_point_3d(self.loader.get_ref_argument())
+                        .normalize_or_zero();
                     if tmp.length() > 0.0 {
                         x_axis = tmp;
                     }
@@ -387,7 +400,8 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 0);
                 if self.loader.get_token_type() == IfcTokenType::Ref {
                     self.loader.step_back();
-                    rel_placement = self.get_local_placement(self.loader.get_ref_argument(), DVec3::ONE);
+                    rel_placement =
+                        self.get_local_placement(self.loader.get_ref_argument(), DVec3::ONE);
                 }
 
                 self.loader.move_to_argument_offset(_express_id, 1);
@@ -408,12 +422,16 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 0);
                 if self.loader.get_token_type() == IfcTokenType::Ref {
                     self.loader.step_back();
-                    axis1 = self.get_cartesian_point_3d(self.loader.get_ref_argument()).normalize_or_zero();
+                    axis1 = self
+                        .get_cartesian_point_3d(self.loader.get_ref_argument())
+                        .normalize_or_zero();
                 }
                 self.loader.move_to_argument_offset(_express_id, 1);
                 if self.loader.get_token_type() == IfcTokenType::Ref {
                     self.loader.step_back();
-                    axis2 = self.get_cartesian_point_3d(self.loader.get_ref_argument()).normalize_or_zero();
+                    axis2 = self
+                        .get_cartesian_point_3d(self.loader.get_ref_argument())
+                        .normalize_or_zero();
                 }
 
                 self.loader.move_to_argument_offset(_express_id, 2);
@@ -429,7 +447,9 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 4);
                 if self.loader.get_token_type() == IfcTokenType::Ref {
                     self.loader.step_back();
-                    axis3 = self.get_cartesian_point_3d(self.loader.get_ref_argument()).normalize_or_zero();
+                    axis3 = self
+                        .get_cartesian_point_3d(self.loader.get_ref_argument())
+                        .normalize_or_zero();
                 }
 
                 if line_type == schema::IFCCARTESIANTRANSFORMATIONOPERATOR3DNONUNIFORM {
@@ -664,7 +684,12 @@ impl<'a> IfcGeometryLoader<'a> {
         length
     }
 
-    pub fn get_parameter_for_point(&self, _curve: &IfcCurve, _total_length: f64, _point: &DVec3) -> f64 {
+    pub fn get_parameter_for_point(
+        &self,
+        _curve: &IfcCurve,
+        _total_length: f64,
+        _point: &DVec3,
+    ) -> f64 {
         if _curve.base.points.is_empty() {
             return 0.0;
         }
@@ -795,7 +820,8 @@ impl<'a> IfcGeometryLoader<'a> {
                 }
 
                 IfcBound3D {
-                    bound_type: crate::web_ifc::geometry::representation::geometry::IfcBoundType::OuterBound,
+                    bound_type:
+                        crate::web_ifc::geometry::representation::geometry::IfcBoundType::OuterBound,
                     orientation: orient,
                     curve,
                 }
@@ -813,7 +839,8 @@ impl<'a> IfcGeometryLoader<'a> {
                 }
 
                 IfcBound3D {
-                    bound_type: crate::web_ifc::geometry::representation::geometry::IfcBoundType::Bound,
+                    bound_type:
+                        crate::web_ifc::geometry::representation::geometry::IfcBoundType::Bound,
                     orientation: orient,
                     curve,
                 }
@@ -821,7 +848,8 @@ impl<'a> IfcGeometryLoader<'a> {
             _ => {
                 eprintln!("[get_bound] unexpected bound type {}", _express_id);
                 IfcBound3D {
-                    bound_type: crate::web_ifc::geometry::representation::geometry::IfcBoundType::Bound,
+                    bound_type:
+                        crate::web_ifc::geometry::representation::geometry::IfcBoundType::Bound,
                     orientation: true,
                     curve: IfcCurve::default(),
                 }
@@ -842,9 +870,12 @@ impl<'a> IfcGeometryLoader<'a> {
 
                 let mut prev_id = 0;
                 for token in points {
-                    let point_id = self.loader.get_ref_argument(token);
+                    let point_id = self.loader.get_ref_argument_at(token);
                     if point_id != prev_id {
-                        curve.base.points.push(self.get_cartesian_point_3d(point_id));
+                        curve
+                            .base
+                            .points
+                            .push(self.get_cartesian_point_3d(point_id));
                     }
                     prev_id = point_id;
                 }
@@ -858,7 +889,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 let mut id = 0u16;
 
                 for token in edges {
-                    let edge_id = self.loader.get_ref_argument(token);
+                    let edge_id = self.loader.get_ref_argument_at(token);
                     let edge_curve = self.get_oriented_edge(edge_id);
                     if curve.base.points.is_empty() {
                         for pt in edge_curve.base.points {
@@ -891,7 +922,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 0);
                 let style_selects = self.loader.get_set_argument();
                 for style_select in style_selects {
-                    let style_id = self.loader.get_ref_argument(style_select);
+                    let style_id = self.loader.get_ref_argument_at(style_select);
                     if let Some(color) = self.get_color(style_id) {
                         return Some(color);
                     }
@@ -929,7 +960,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 2);
                 let style_selects = self.loader.get_set_argument();
                 for style_select in style_selects {
-                    let style_id = self.loader.get_ref_argument(style_select);
+                    let style_id = self.loader.get_ref_argument_at(style_select);
                     if let Some(color) = self.get_color(style_id) {
                         return Some(color);
                     }
@@ -954,7 +985,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 3);
                 let rep_items = self.loader.get_set_argument();
                 for rep_item in rep_items {
-                    let rep_item_id = self.loader.get_ref_argument(rep_item);
+                    let rep_item_id = self.loader.get_ref_argument_at(rep_item);
                     if let Some(color) = self.get_color(rep_item_id) {
                         return Some(color);
                     }
@@ -965,7 +996,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 1);
                 let styled_items = self.loader.get_set_argument();
                 for styled_item in styled_items {
-                    let styled_item_id = self.loader.get_ref_argument(styled_item);
+                    let styled_item_id = self.loader.get_ref_argument_at(styled_item);
                     if let Some(color) = self.get_color(styled_item_id) {
                         return Some(color);
                     }
@@ -988,7 +1019,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 0);
                 let layers = self.loader.get_set_argument();
                 for layer in layers {
-                    let layer_id = self.loader.get_ref_argument(layer);
+                    let layer_id = self.loader.get_ref_argument_at(layer);
                     if let Some(color) = self.get_color(layer_id) {
                         return Some(color);
                     }
@@ -1014,7 +1045,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 1);
                 let style_selects = self.loader.get_set_argument();
                 for style_select in style_selects {
-                    let style_id = self.loader.get_ref_argument(style_select);
+                    let style_id = self.loader.get_ref_argument_at(style_select);
                     if let Some(color) = self.get_color(style_id) {
                         return Some(color);
                     }
@@ -1027,7 +1058,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 let mut last_color = None;
                 let mut result = false;
                 for material in materials {
-                    let material_id = self.loader.get_ref_argument(material);
+                    let material_id = self.loader.get_ref_argument_at(material);
                     if let Some(color) = self.get_color(material_id) {
                         last_color = Some(color);
                     }
@@ -1043,7 +1074,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 2);
                 let constituents = self.loader.get_set_argument();
                 for constituent in constituents {
-                    let constituent_id = self.loader.get_ref_argument(constituent);
+                    let constituent_id = self.loader.get_ref_argument_at(constituent);
                     if let Some(color) = self.get_color(constituent_id) {
                         return Some(color);
                     }
@@ -1069,7 +1100,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(_express_id, 2);
                 let material_profiles = self.loader.get_set_argument();
                 for material_profile in material_profiles {
-                    let material_profile_id = self.loader.get_ref_argument(material_profile);
+                    let material_profile_id = self.loader.get_ref_argument_at(material_profile);
                     if let Some(color) = self.get_color(material_profile_id) {
                         return Some(color);
                     }
@@ -1103,7 +1134,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 let mut express_ids = Vec::new();
 
                 for face in faces {
-                    let express_id = self.loader.get_ref_argument(face);
+                    let express_id = self.loader.get_ref_argument_at(face);
                     let profile = self.get_profile(express_id);
                     curves.push(profile.curve);
                     express_ids.push(express_id);
@@ -1123,7 +1154,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 let mut express_ids = Vec::new();
 
                 for face in faces {
-                    let express_id = self.loader.get_ref_argument(face);
+                    let express_id = self.loader.get_ref_argument_at(face);
                     let profile = self.get_profile(express_id);
                     curves.push(profile.curve);
                     express_ids.push(express_id);
@@ -1137,7 +1168,12 @@ impl<'a> IfcGeometryLoader<'a> {
         }
     }
 
-    pub fn get_cross_sections_3d(&self, _express_id: u32, _scaled: bool, _coordination: DMat4) -> IfcCrossSections {
+    pub fn get_cross_sections_3d(
+        &self,
+        _express_id: u32,
+        _scaled: bool,
+        _coordination: DMat4,
+    ) -> IfcCrossSections {
         let line_type = self.loader.get_line_type(_express_id);
         let mut sections = IfcCrossSections::default();
         let mut scale = 1.0;
@@ -1173,8 +1209,9 @@ impl<'a> IfcGeometryLoader<'a> {
                 let mut _fallback_positions: Vec<DMat4> = Vec::new();
 
                 for offset in cross_section_position_offsets {
-                    let cross_section_position_id = self.loader.get_ref_argument(offset);
-                    let linear_placement_type = self.loader.get_line_type(cross_section_position_id);
+                    let cross_section_position_id = self.loader.get_ref_argument_at(offset);
+                    let linear_placement_type =
+                        self.loader.get_line_type(cross_section_position_id);
                     if linear_placement_type != schema::IFCAXIS2PLACEMENTLINEAR {
                         eprintln!(
                             "[IFCSECTIONEDSOLIDHORIZONTAL] unexpected Location type {}",
@@ -1184,12 +1221,14 @@ impl<'a> IfcGeometryLoader<'a> {
                     }
 
                     let mut axis = DVec3::new(0.0, 0.0, 1.0);
-                    self.loader.move_to_argument_offset(cross_section_position_id, 0);
+                    self.loader
+                        .move_to_argument_offset(cross_section_position_id, 0);
                     if self.loader.get_token_type() == IfcTokenType::Ref {
                         self.loader.step_back();
                         let location_id = self.loader.get_ref_argument();
 
-                        self.loader.move_to_argument_offset(cross_section_position_id, 1);
+                        self.loader
+                            .move_to_argument_offset(cross_section_position_id, 1);
                         if self.loader.get_token_type() == IfcTokenType::Ref {
                             self.loader.step_back();
                             axis = self.get_cartesian_point_3d(self.loader.get_ref_argument());
@@ -1226,12 +1265,10 @@ impl<'a> IfcGeometryLoader<'a> {
                                     .entry(basis_curve_id)
                                     .or_default()
                                     .insert(distance_along);
-                                map_cross_section_positions
-                                    .insert(distance_along, DMat4::IDENTITY);
+                                map_cross_section_positions.insert(distance_along, DMat4::IDENTITY);
                             }
                         } else {
-                            let mut linear_placement =
-                                self.get_local_placement(location_id, axis);
+                            let mut linear_placement = self.get_local_placement(location_id, axis);
                             linear_placement *= scale;
                             _fallback_positions.push(linear_placement);
                         }
@@ -1264,8 +1301,9 @@ impl<'a> IfcGeometryLoader<'a> {
                     map_cross_section_positions.into_iter().collect();
 
                 let mut cross_section_index = 0usize;
-                let mut current_cross_section_id =
-                    self.loader.get_ref_argument(cross_sections_offsets[cross_section_index]);
+                let mut current_cross_section_id = self
+                    .loader
+                    .get_ref_argument_at(cross_sections_offsets[cross_section_index]);
 
                 for (distance, placement) in ordered_positions {
                     let mut current_profile = self.get_profile(current_cross_section_id);
@@ -1285,7 +1323,7 @@ impl<'a> IfcGeometryLoader<'a> {
                         }
                         current_cross_section_id = self
                             .loader
-                            .get_ref_argument(cross_sections_offsets[cross_section_index]);
+                            .get_ref_argument_at(cross_sections_offsets[cross_section_index]);
                     }
                 }
 
@@ -1307,7 +1345,7 @@ impl<'a> IfcGeometryLoader<'a> {
 
                 let mut transform = Vec::new();
                 for linear_position in linear_positions {
-                    let express_id = self.loader.get_ref_argument(linear_position);
+                    let express_id = self.loader.get_ref_argument_at(linear_position);
                     let linear_placement = self.get_local_placement(express_id, DVec3::ONE) * scale;
                     transform.push(linear_placement);
                 }
@@ -1317,7 +1355,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 let mut id = 0usize;
 
                 for face in faces {
-                    let express_id = self.loader.get_ref_argument(face);
+                    let express_id = self.loader.get_ref_argument_at(face);
                     let mut profile = self.get_profile(express_id);
                     for point in &mut profile.curve.base.points {
                         let p_temp = transform[id] * point.extend(1.0);
@@ -1341,7 +1379,7 @@ impl<'a> IfcGeometryLoader<'a> {
 
                 let mut transform = Vec::new();
                 for linear_position in linear_positions {
-                    let express_id = self.loader.get_ref_argument(linear_position);
+                    let express_id = self.loader.get_ref_argument_at(linear_position);
                     let linear_placement = self.get_local_placement(express_id, DVec3::ONE) * scale;
                     transform.push(linear_placement);
                 }
@@ -1350,7 +1388,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 let mut express_ids = Vec::new();
                 let mut id = 0usize;
                 for face in faces {
-                    let express_id = self.loader.get_ref_argument(face);
+                    let express_id = self.loader.get_ref_argument_at(face);
                     let mut profile = self.get_profile(express_id);
                     for point in &mut profile.curve.base.points {
                         let p_temp = transform[id] * point.extend(1.0);
@@ -1370,7 +1408,11 @@ impl<'a> IfcGeometryLoader<'a> {
         }
     }
 
-    pub fn get_placements_on_curve_points(&self, _curve_id: u32, _placements: &mut HashMap<f64, DMat4>) {
+    pub fn get_placements_on_curve_points(
+        &self,
+        _curve_id: u32,
+        _placements: &mut HashMap<f64, DMat4>,
+    ) {
         let mut sorted: BTreeMap<f64, DMat4> = _placements.iter().map(|(k, v)| (*k, *v)).collect();
         if sorted.len() < 2 {
             return;
@@ -1380,7 +1422,10 @@ impl<'a> IfcGeometryLoader<'a> {
 
         let basis_curve = self.get_local_curve(_curve_id);
         if basis_curve.base.points.is_empty() {
-            eprintln!("[get_placements_on_curve_points] BasisCurve has no points {}", _curve_id);
+            eprintln!(
+                "[get_placements_on_curve_points] BasisCurve has no points {}",
+                _curve_id
+            );
             return;
         }
 
@@ -1429,7 +1474,13 @@ impl<'a> IfcGeometryLoader<'a> {
         _placements.extend(sorted.into_iter());
     }
 
-    pub fn get_alignment(&self, _express_id: u32, _alignment: IfcAlignment, _transform: DMat4, _source_express_id: u32) -> IfcAlignment {
+    pub fn get_alignment(
+        &self,
+        _express_id: u32,
+        _alignment: IfcAlignment,
+        _transform: DMat4,
+        _source_express_id: u32,
+    ) -> IfcAlignment {
         let line_type = self.loader.get_line_type(_express_id);
         let mut alignment = _alignment;
 
@@ -1485,10 +1536,10 @@ impl<'a> IfcGeometryLoader<'a> {
 
                 if let Some(rel_agg) = self.rel_aggregates.get(&_express_id) {
                     for express_id in rel_agg {
-                        alignment.horizontal.curves.push(self.get_alignment_curve(
-                            *express_id,
-                            _source_express_id,
-                        ));
+                        alignment
+                            .horizontal
+                            .curves
+                            .push(self.get_alignment_curve(*express_id, _source_express_id));
                     }
 
                     for curve in &mut alignment.horizontal.curves {
@@ -1501,10 +1552,10 @@ impl<'a> IfcGeometryLoader<'a> {
 
                 if let Some(rel_nest) = self.rel_nests.get(&_express_id) {
                     for express_id in rel_nest {
-                        alignment.horizontal.curves.push(self.get_alignment_curve(
-                            *express_id,
-                            _source_express_id,
-                        ));
+                        alignment
+                            .horizontal
+                            .curves
+                            .push(self.get_alignment_curve(*express_id, _source_express_id));
                     }
 
                     for curve in &mut alignment.horizontal.curves {
@@ -1530,10 +1581,10 @@ impl<'a> IfcGeometryLoader<'a> {
 
                 if let Some(rel_agg) = self.rel_aggregates.get(&_express_id) {
                     for express_id in rel_agg {
-                        alignment.vertical.curves.push(self.get_alignment_curve(
-                            *express_id,
-                            _source_express_id,
-                        ));
+                        alignment
+                            .vertical
+                            .curves
+                            .push(self.get_alignment_curve(*express_id, _source_express_id));
                     }
 
                     for curve in &mut alignment.vertical.curves {
@@ -1546,10 +1597,10 @@ impl<'a> IfcGeometryLoader<'a> {
 
                 if let Some(rel_nest) = self.rel_nests.get(&_express_id) {
                     for express_id in rel_nest {
-                        alignment.vertical.curves.push(self.get_alignment_curve(
-                            *express_id,
-                            _source_express_id,
-                        ));
+                        alignment
+                            .vertical
+                            .curves
+                            .push(self.get_alignment_curve(*express_id, _source_express_id));
                     }
 
                     for curve in &mut alignment.vertical.curves {
@@ -1607,7 +1658,9 @@ impl<'a> IfcGeometryLoader<'a> {
 
     fn populate_rel_voids_map(&self) -> HashMap<u32, Vec<u32>> {
         let mut result = HashMap::new();
-        let rel_voids = self.loader.get_express_ids_with_type(schema::IFCRELVOIDSELEMENT);
+        let rel_voids = self
+            .loader
+            .get_express_ids_with_type(schema::IFCRELVOIDSELEMENT);
 
         for rel_void_id in rel_voids {
             self.loader.move_to_argument_offset(rel_void_id, 4);
@@ -1624,7 +1677,9 @@ impl<'a> IfcGeometryLoader<'a> {
 
     fn populate_rel_aggregates_map(&mut self) -> HashMap<u32, Vec<u32>> {
         let mut result = HashMap::new();
-        let rel_aggregates = self.loader.get_express_ids_with_type(schema::IFCRELAGGREGATES);
+        let rel_aggregates = self
+            .loader
+            .get_express_ids_with_type(schema::IFCRELAGGREGATES);
 
         for rel_aggregate_id in rel_aggregates {
             self.loader.move_to_argument_offset(rel_aggregate_id, 4);
@@ -1633,7 +1688,7 @@ impl<'a> IfcGeometryLoader<'a> {
             let rel_voids_for_relating = self.rel_voids.get(&relating_building_element).cloned();
 
             for aggregate in aggregates {
-                let aggregate_id = self.loader.get_ref_argument(aggregate);
+                let aggregate_id = self.loader.get_ref_argument_at(aggregate);
                 result
                     .entry(relating_building_element)
                     .or_default()
@@ -1657,7 +1712,7 @@ impl<'a> IfcGeometryLoader<'a> {
             let relating_building_element = self.loader.get_ref_argument();
             let nests = self.loader.get_set_argument();
             for nest in nests {
-                let nest_id = self.loader.get_ref_argument(nest);
+                let nest_id = self.loader.get_ref_argument_at(nest);
                 result
                     .entry(relating_building_element)
                     .or_default()
@@ -1681,7 +1736,7 @@ impl<'a> IfcGeometryLoader<'a> {
             self.loader.move_to_argument_offset(styled_item_id, 1);
             let styles = self.loader.get_set_argument();
             for style in styles {
-                let style_id = self.loader.get_ref_argument(style);
+                let style_id = self.loader.get_ref_argument_at(style);
                 result
                     .entry(relating_item)
                     .or_default()
@@ -1705,7 +1760,7 @@ impl<'a> IfcGeometryLoader<'a> {
             let related_objects = self.loader.get_set_argument();
 
             for related_object in related_objects {
-                let related_object_id = self.loader.get_ref_argument(related_object);
+                let related_object_id = self.loader.get_ref_argument_at(related_object);
                 result
                     .entry(related_object_id)
                     .or_default()
@@ -1729,7 +1784,7 @@ impl<'a> IfcGeometryLoader<'a> {
             let relating_property_definition = self.loader.get_ref_argument();
 
             for related_object in related_objects {
-                let related_object_id = self.loader.get_ref_argument(related_object);
+                let related_object_id = self.loader.get_ref_argument_at(related_object);
                 result
                     .entry(related_object_id)
                     .or_default()
@@ -1754,7 +1809,7 @@ impl<'a> IfcGeometryLoader<'a> {
         let unit_ids = self.loader.get_set_argument();
 
         for unit_id in unit_ids {
-            let unit_ref = self.loader.get_ref_argument(unit_id);
+            let unit_ref = self.loader.get_ref_argument_at(unit_id);
             let line_type = self.loader.get_line_type(unit_ref);
 
             if line_type == schema::IFCSIUNIT {
@@ -1882,7 +1937,9 @@ impl<'a> IfcGeometryLoader<'a> {
         }
     }
 
-    fn read_curve_indices(&self) -> Vec<crate::web_ifc::geometry::representation::geometry::IfcSegmentIndexSelect> {
+    fn read_curve_indices(
+        &self,
+    ) -> Vec<crate::web_ifc::geometry::representation::geometry::IfcSegmentIndexSelect> {
         let mut result = Vec::new();
         let mut t = self.loader.get_token_type();
         if t == IfcTokenType::Ref {
@@ -1895,10 +1952,11 @@ impl<'a> IfcGeometryLoader<'a> {
         while self.loader.get_token_type() != IfcTokenType::SetEnd {
             self.loader.step_back();
             if self.loader.get_token_type() == IfcTokenType::Label {
-                let mut segment = crate::web_ifc::geometry::representation::geometry::IfcSegmentIndexSelect {
-                    r#type: String::new(),
-                    indexs: Vec::new(),
-                };
+                let mut segment =
+                    crate::web_ifc::geometry::representation::geometry::IfcSegmentIndexSelect {
+                        r#type: String::new(),
+                        indexs: Vec::new(),
+                    };
                 self.loader.step_back();
                 segment.r#type = self.loader.get_string_argument().to_string();
                 while self.loader.get_token_type() != IfcTokenType::SetEnd {
@@ -1925,7 +1983,7 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(express_id, 0);
                 let points = self.loader.get_set_argument();
                 for token in points {
-                    let point_id = self.loader.get_ref_argument(token);
+                    let point_id = self.loader.get_ref_argument_at(token);
                     if params.dimensions == 2 {
                         curve.base.add_2d(self.get_cartesian_point_2d(point_id));
                     } else {
@@ -1949,7 +2007,7 @@ impl<'a> IfcGeometryLoader<'a> {
                     );
                 }
                 for segment in segments {
-                    let segment_id = self.loader.get_ref_argument(segment);
+                    let segment_id = self.loader.get_ref_argument_at(segment);
                     self.compute_curve(segment_id, curve, params);
                 }
             }
@@ -2146,10 +2204,11 @@ impl<'a> IfcGeometryLoader<'a> {
                                 }
                                 let arc_len = arc.base.points.len();
                                 if arc_len > 0 {
-                                    curve.arc_segments.push(
-                                        (curve.base.points.len() - 1 - arc_len) as u32,
-                                    );
-                                    curve.arc_segments
+                                    curve
+                                        .arc_segments
+                                        .push((curve.base.points.len() - 1 - arc_len) as u32);
+                                    curve
+                                        .arc_segments
                                         .push((curve.base.points.len() - 1) as u32);
                                 }
                             }
@@ -2182,10 +2241,11 @@ impl<'a> IfcGeometryLoader<'a> {
                                     curve.base.add(pt, false);
                                 }
                                 if arc_len > 0 {
-                                    curve.arc_segments.push(
-                                        (curve.base.points.len() - 1 - arc_len) as u32,
-                                    );
-                                    curve.arc_segments
+                                    curve
+                                        .arc_segments
+                                        .push((curve.base.points.len() - 1 - arc_len) as u32);
+                                    curve
+                                        .arc_segments
                                         .push((curve.base.points.len() - 1) as u32);
                                 }
                             }
@@ -2202,7 +2262,11 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(express_id, 0);
                 let position_id = self.loader.get_ref_argument();
                 let type_placement = self.loader.get_line_type(position_id);
-                let dimensions = if type_placement == schema::IFCAXIS2PLACEMENT3D { 3 } else { 2 };
+                let dimensions = if type_placement == schema::IFCAXIS2PLACEMENT3D {
+                    3
+                } else {
+                    2
+                };
 
                 self.loader.move_to_argument_offset(express_id, 1);
                 let radius1 = self.loader.get_double_argument();
@@ -2412,7 +2476,8 @@ impl<'a> IfcGeometryLoader<'a> {
                 self.loader.move_to_argument_offset(express_id, 3);
                 let holes = self.loader.get_set_argument();
                 for hole in holes {
-                    let hole_curve = self.get_curve(self.loader.get_ref_argument(hole), 2, false);
+                    let hole_curve =
+                        self.get_curve(self.loader.get_ref_argument_at(hole), 2, false);
                     profile.holes.push(hole_curve);
                 }
                 profile
@@ -2432,13 +2497,8 @@ impl<'a> IfcGeometryLoader<'a> {
                     DMat3::IDENTITY
                 };
                 let placement_4 = self.mat3_to_mat4(placement);
-                profile.curve.base = get_rectangle_curve(
-                    xdim,
-                    ydim,
-                    placement_4,
-                    self.circle_segments as i32,
-                    0.0,
-                );
+                profile.curve.base =
+                    get_rectangle_curve(xdim, ydim, placement_4, self.circle_segments as i32, 0.0);
                 profile
             }
             schema::IFCRECTANGLEHOLLOWPROFILEDEF => {
@@ -2971,7 +3031,9 @@ impl<'a> IfcGeometryLoader<'a> {
     }
 
     fn not_present(&self, pt: DVec3, points: &[DVec3]) -> bool {
-        !points.iter().any(|p| p.x == pt.x && p.y == pt.y && p.z == pt.z)
+        !points
+            .iter()
+            .any(|p| p.x == pt.x && p.y == pt.y && p.z == pt.z)
     }
 
     fn mat3_to_mat4(&self, mat: DMat3) -> DMat4 {
@@ -3001,7 +3063,11 @@ impl<'a> IfcGeometryLoader<'a> {
         let den2 = 2.0 * (p1.y - p2.y);
         let cen_y_a = (f2 - 2.0 * cen_x * (p1.x - p3.x)) / den1;
         let cen_y_b = (f1 - 2.0 * cen_x * (p1.x - p2.x)) / den2;
-        let cen_y = if den1.abs() > den2.abs() { cen_y_a } else { cen_y_b };
+        let cen_y = if den1.abs() > den2.abs() {
+            cen_y_a
+        } else {
+            cen_y_b
+        };
         let center = DVec2::new(cen_x, cen_y);
         let radius = ((cen_x - p1.x).powi(2) + (cen_y - p1.y).powi(2)).sqrt();
 
