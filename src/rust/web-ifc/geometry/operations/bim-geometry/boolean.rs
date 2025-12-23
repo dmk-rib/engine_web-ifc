@@ -1,8 +1,8 @@
 //! Boolean operations wrapper.
 
+use super::boolean_utils::bool_process;
 use super::buffers::Buffers;
 use super::geometry::Geometry;
-use super::boolean_utils::bool_process;
 
 #[derive(Clone, Debug, Default)]
 pub struct Boolean {
@@ -15,7 +15,7 @@ pub struct Boolean {
 impl Boolean {
     pub fn get_buffers(&self) -> Buffers {
         let mut buffers = Buffers::default();
-        let geom = bool_process(self.geometry.clone(), &mut self.seconds.clone(), &self.op);
+        let geom = bool_process(self.geometry.clone(), &self.seconds, &self.op);
         for r in 0..geom.num_faces {
             let f = geom.get_face(r as usize);
             buffers.add_tri(
