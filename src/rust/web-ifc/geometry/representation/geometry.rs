@@ -151,8 +151,46 @@ pub struct IfcAlignment {
 }
 
 impl IfcAlignment {
-    pub fn transform(&mut self, _coordination_matrix: DMat4) {
-        unimplemented!("IfcAlignment::transform not yet implemented");
+    pub fn transform(&mut self, coordination_matrix: DMat4) {
+        for ic in 0..self.horizontal.curves.len() {
+            if ic > 0 {
+                let last_index = self.horizontal.curves[ic - 1]
+                    .base
+                    .points
+                    .len()
+                    .saturating_sub(1);
+                let current_last_index = self.horizontal.curves[ic]
+                    .base
+                    .points
+                    .len()
+                    .saturating_sub(1);
+                if !self.horizontal.curves[ic - 1].base.points.is_empty()
+                    && !self.horizontal.curves[ic].base.points.is_empty()
+                {
+                    let d1 = self.horizontal.curves[ic].base.points[0]
+                        .distance(self.horizontal.curves[ic - 1].base.points[last_index]);
+                    let d2 = self.horizontal.curves[ic].base.points[current_last_index]
+                        .distance(self.horizontal.curves[ic - 1].base.points[last_index]);
+                    if d1 > d2 {
+                        self.horizontal.curves[ic].base.points.reverse();
+                    }
+                }
+            }
+        }
+
+        for curve in &mut self.horizontal.curves {
+            for point in &mut curve.base.points {
+                let transformed = coordination_matrix * DVec4::new(point.x, 0.0, -point.y, 1.0);
+                *point = DVec3::new(transformed.x, -transformed.z, transformed.y);
+            }
+        }
+
+        let y_offset = coordination_matrix.w_axis.y;
+        for curve in &mut self.vertical.curves {
+            for point in &mut curve.base.points {
+                *point = DVec3::new(point.x, point.y + y_offset, 1.0);
+            }
+        }
     }
 }
 
@@ -210,7 +248,6 @@ pub fn normalize_ifc() -> DMat4 {
     )
 }
 
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum IfcBoundType {
     OuterBound,
@@ -235,7 +272,10 @@ pub struct IfcSurface {
 
 impl IfcSurface {
     pub fn normal(&self) -> DVec3 {
-        if !self.cylinder_surface.active && !self.b_spline_surface.active && !self.revolution_surface.active {
+        if !self.cylinder_surface.active
+            && !self.b_spline_surface.active
+            && !self.revolution_surface.active
+        {
             self.transformation.z_axis.truncate()
         } else {
             DVec3::ZERO
@@ -246,7 +286,7 @@ impl IfcSurface {
 pub fn flatten_transformation(transformation: DMat4) -> [f64; 16] {
     let cols = transformation.to_cols_array();
     [
-        cols[0], cols[1], cols[2], cols[3], cols[4], cols[5], cols[6], cols[7], cols[8], cols[9], cols[10],
-        cols[11], cols[12], cols[13], cols[14], cols[15],
+        cols[0], cols[1], cols[2], cols[3], cols[4], cols[5], cols[6], cols[7], cols[8], cols[9],
+        cols[10], cols[11], cols[12], cols[13], cols[14], cols[15],
     ]
 }

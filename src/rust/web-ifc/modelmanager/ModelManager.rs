@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::api::helpers::log::{Log, LogLevel};
 use crate::web_ifc::geometry::ifc_geometry_processor::IfcGeometryProcessor;
 use crate::web_ifc::parsing::ifc_loader::IfcLoader;
 use crate::web_ifc::schema::ifc_schema_manager::IfcSchemaManager;
@@ -45,7 +46,7 @@ impl Default for LoaderSettings {
 #[derive(Debug)]
 pub struct ModelManager {
     schema_manager: Arc<IfcSchemaManager>,
-    loaders: Vec<IfcLoader>,
+    loaders: Vec<Option<IfcLoader>>,
     settings: Vec<LoaderSettings>,
     geometry_processors: HashMap<u32, IfcGeometryProcessor>,
     header_shown: bool,
@@ -73,7 +74,9 @@ impl ModelManager {
     }
 
     pub fn get_ifc_loader(&self, model_id: u32) -> Option<&IfcLoader> {
-        self.loaders.get(model_id as usize)
+        self.loaders
+            .get(model_id as usize)
+            .and_then(|loader| loader.as_ref())
     }
 
     pub fn get_schema_manager(&self) -> &IfcSchemaManager {
@@ -81,11 +84,20 @@ impl ModelManager {
     }
 
     pub fn is_model_open(&self, model_id: u32) -> bool {
-        (model_id as usize) < self.loaders.len()
+        self.loaders
+            .get(model_id as usize)
+            .map_or(false, |loader| loader.is_some())
     }
 
     pub fn close_model(&mut self, _model_id: u32) {
-        unimplemented!("close_model not yet implemented");
+        if !self.is_model_open(_model_id) {
+            return;
+        }
+
+        if let Some(loader_slot) = self.loaders.get_mut(_model_id as usize) {
+            *loader_slot = None;
+        }
+        self.geometry_processors.remove(&_model_id);
     }
 
     pub fn create_model(&mut self, settings: LoaderSettings) -> u32 {
@@ -96,13 +108,19 @@ impl ModelManager {
             settings.linewriter_buffer as u32,
             Arc::clone(&self.schema_manager),
         );
-        self.loaders.push(loader);
+        self.loaders.push(Some(loader));
         self.settings.push(settings);
         model_id
     }
 
     pub fn set_log_level(&mut self, _level: u8) {
-        unimplemented!("set_log_level not yet implemented");
+        let level = match _level {
+            0 | 1 => LogLevel::LOG_LEVEL_DEBUG,
+            2 | 3 => LogLevel::LOG_LEVEL_WARN,
+            4 | 5 => LogLevel::LOG_LEVEL_ERROR,
+            _ => LogLevel::LOG_LEVEL_OFF,
+        };
+        Log::set_log_level(level);
     }
 
     pub fn close_all_models(&mut self) {

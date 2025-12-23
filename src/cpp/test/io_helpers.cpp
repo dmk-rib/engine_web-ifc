@@ -4,6 +4,7 @@
 
 #include "io_helpers.h"
 #include <fstream>
+#include <limits>
 #include "../web-ifc/geometry/operations/boolean-utils/fuzzy-bools.h"
 #include "../web-ifc/geometry/representation/IfcGeometry.h"
 #include "../web-ifc/geometry/representation/geometry.h"
@@ -62,9 +63,11 @@ namespace webifc::io
 
         double maxSize = std::max(width, height);
 
-        if (width == 0 && height == 0)
+        if (maxSize <= std::numeric_limits<double>::epsilon())
         {
-            printf("asdf\n");
+            glm::dvec2 center = offset + (size * 0.5);
+            retval.assign(input.size(), center);
+            return retval;
         }
 
         for (auto &pt : input)
