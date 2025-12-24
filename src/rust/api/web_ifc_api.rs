@@ -4,8 +4,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc as SyncArc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::api::helpers::log::{Log, LogLevel};
-use crate::api::helpers::properties::Properties;
+use crate::api::helpers::log::Log;
+pub use crate::api::helpers::log::LogLevel;
+pub use crate::api::helpers::properties::Properties;
 use crate::api::value::{Map, Value};
 
 pub use crate::api::ifc_schema::*;

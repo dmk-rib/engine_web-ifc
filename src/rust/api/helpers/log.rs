@@ -15,11 +15,14 @@ pub enum LogLevel {
 
 impl From<i32> for LogLevel {
     fn from(value: i32) -> Self {
-        match value {
-            0 | 1 => LogLevel::LOG_LEVEL_DEBUG,
-            2 | 3 => LogLevel::LOG_LEVEL_WARN,
-            4 | 5 => LogLevel::LOG_LEVEL_ERROR,
-            _ => LogLevel::LOG_LEVEL_OFF,
+        if value <= LogLevel::LOG_LEVEL_DEBUG as i32 {
+            LogLevel::LOG_LEVEL_DEBUG
+        } else if value <= LogLevel::LOG_LEVEL_WARN as i32 {
+            LogLevel::LOG_LEVEL_WARN
+        } else if value <= LogLevel::LOG_LEVEL_ERROR as i32 {
+            LogLevel::LOG_LEVEL_ERROR
+        } else {
+            LogLevel::LOG_LEVEL_OFF
         }
     }
 }

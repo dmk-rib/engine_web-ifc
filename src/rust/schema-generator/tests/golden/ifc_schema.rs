@@ -40,6 +40,18 @@ pub struct IfcLineObject {
     pub express_id: i64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PropertyDef {
+    pub name: &'static str,
+    pub type_code: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EntityDef {
+    pub type_code: u32,
+    pub properties: &'static [PropertyDef],
+}
+
 // Schema CRC32 constants
 pub const FILE_SCHEMA: u32 = 1109904537u32;
 pub const FILE_NAME: u32 = 1390159747u32;
@@ -62,6 +74,45 @@ pub static SCHEMA_NAMES: &[&[&str]] = &[
 
 pub static IFC_ELEMENTS: &[u32] = &[
 ];
+
+pub const IFCMINI_ENTITY_DEFS: &[EntityDef] = &[
+    EntityDef { type_code: 2341007311u32, properties: IFCMINI_IFCROOT_PROPERTIES },
+    EntityDef { type_code: 2391406946u32, properties: IFCMINI_IFCWALL_PROPERTIES },
+];
+pub const IFCMINI_IFCROOT_PROPERTIES: &[PropertyDef] = &[
+    PropertyDef { name: "GlobalId", type_code: 3258342251u32 },
+    PropertyDef { name: "OwnerHistory", type_code: 3258342251u32 },
+];
+pub const IFCMINI_IFCWALL_PROPERTIES: &[PropertyDef] = &[
+    PropertyDef { name: "GlobalId", type_code: 3258342251u32 },
+    PropertyDef { name: "OwnerHistory", type_code: 3258342251u32 },
+    PropertyDef { name: "Name", type_code: 3258342251u32 },
+    PropertyDef { name: "Height", type_code: 1243674935u32 },
+    PropertyDef { name: "Tags", type_code: 3258342251u32 },
+];
+
+pub fn get_property_name(schema: Schemas, type_code: u32, prop: usize) -> Option<&'static str> {
+    find_entity(schema, type_code)
+        .and_then(|entity| entity.properties.get(prop))
+        .map(|prop| prop.name)
+}
+
+pub fn get_property_type_code(schema: Schemas, type_code: u32, prop: usize) -> Option<u32> {
+    find_entity(schema, type_code)
+        .and_then(|entity| entity.properties.get(prop))
+        .map(|prop| prop.type_code)
+}
+
+pub fn get_property_count(schema: Schemas, type_code: u32) -> Option<usize> {
+    find_entity(schema, type_code).map(|entity| entity.properties.len())
+}
+
+fn find_entity(schema: Schemas, type_code: u32) -> Option<&'static EntityDef> {
+    let defs = match schema {
+        Schemas::IFCMINI => IFCMINI_ENTITY_DEFS,
+    };
+    defs.iter().find(|def| def.type_code == type_code)
+}
 
 pub mod IFCMINI {
     use super::{Handle, IfcLineObject, NumberHandle, logical};

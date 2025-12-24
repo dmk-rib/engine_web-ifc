@@ -51,6 +51,18 @@ pub fn generate_rust(schemas: &[Schema]) -> Result<String> {
     output.push("    pub express_id: i64,".to_string());
     output.push("}".to_string());
     output.push("".to_string());
+    output.push("#[derive(Clone, Copy, Debug, PartialEq)]".to_string());
+    output.push("pub struct PropertyDef {".to_string());
+    output.push("    pub name: &'static str,".to_string());
+    output.push("    pub type_code: u32,".to_string());
+    output.push("}".to_string());
+    output.push("".to_string());
+    output.push("#[derive(Clone, Copy, Debug, PartialEq)]".to_string());
+    output.push("pub struct EntityDef {".to_string());
+    output.push("    pub type_code: u32,".to_string());
+    output.push("    pub properties: &'static [PropertyDef],".to_string());
+    output.push("}".to_string());
+    output.push("".to_string());
 
     let mut all_names = OrderedSet::new();
     all_names.insert("FILE_SCHEMA".to_string());
@@ -119,6 +131,12 @@ pub fn generate_rust(schemas: &[Schema]) -> Result<String> {
     }
     output.push("];".to_string());
     output.push("".to_string());
+
+    for schema in schemas {
+        output.extend(generate_schema_property_defs(schema, &crc_table));
+    }
+
+    output.extend(generate_property_helpers(schemas));
 
     for schema in schemas {
         output.push(format!("pub mod {} {{", schema.name_clean));
@@ -204,6 +222,15 @@ fn generate_entity(entity: &Entity, types: &[TypeDef]) -> Vec<String> {
         lines.push(format!("        pub {}: {},", prop.name, ty));
     }
 
+    for prop in &entity.inverse_props {
+        let mut ty = rust_type_from_name(&prop.type_name, types);
+        if prop.set {
+            ty = format!("Vec<{ty}>");
+        }
+        ty = format!("Option<{ty}>");
+        lines.push(format!("        pub {}: {},", prop.name, ty));
+    }
+
     lines.push("    }".to_string());
     lines
 }
@@ -264,6 +291,96 @@ fn sanitize_ident(value: &str) -> String {
     } else {
         result
     }
+}
+
+fn generate_schema_property_defs(schema: &Schema, crc_table: &[u32; 256]) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push(format!(
+        "pub const {}_ENTITY_DEFS: &[EntityDef] = &[",
+        schema.name_clean.to_uppercase()
+    ));
+    for entity in &schema.entities {
+        let entity_code = crc32(&entity.name.to_uppercase(), crc_table);
+        let props_name = format!(
+            "{}_{}_PROPERTIES",
+            schema.name_clean.to_uppercase(),
+            entity.name.to_uppercase()
+        );
+        lines.push(format!(
+            "    EntityDef {{ type_code: {entity_code}u32, properties: {props_name} }},"
+        ));
+    }
+    lines.push("];".to_string());
+
+    for entity in &schema.entities {
+        let props_name = format!(
+            "{}_{}_PROPERTIES",
+            schema.name_clean.to_uppercase(),
+            entity.name.to_uppercase()
+        );
+        lines.push(format!("pub const {props_name}: &[PropertyDef] = &["));
+        for prop in entity
+            .derived_props
+            .iter()
+            .filter(|prop| !entity.ifc_derived_props.contains(&prop.name))
+        {
+            let type_code = crc32(&prop.type_name.to_uppercase(), crc_table);
+            lines.push(format!(
+                "    PropertyDef {{ name: \"{}\", type_code: {}u32 }},",
+                prop.name, type_code
+            ));
+        }
+        lines.push("];".to_string());
+    }
+    lines.push("".to_string());
+    lines
+}
+
+fn generate_property_helpers(schemas: &[Schema]) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push("pub fn get_property_name(schema: Schemas, type_code: u32, prop: usize) -> Option<&'static str> {".to_string());
+    lines.push(
+        "    find_entity(schema, type_code)
+        .and_then(|entity| entity.properties.get(prop))
+        .map(|prop| prop.name)
+}"
+        .to_string(),
+    );
+    lines.push("".to_string());
+    lines.push("pub fn get_property_type_code(schema: Schemas, type_code: u32, prop: usize) -> Option<u32> {".to_string());
+    lines.push(
+        "    find_entity(schema, type_code)
+        .and_then(|entity| entity.properties.get(prop))
+        .map(|prop| prop.type_code)
+}"
+        .to_string(),
+    );
+    lines.push("".to_string());
+    lines.push(
+        "pub fn get_property_count(schema: Schemas, type_code: u32) -> Option<usize> {".to_string(),
+    );
+    lines.push(
+        "    find_entity(schema, type_code).map(|entity| entity.properties.len())".to_string(),
+    );
+    lines.push("}".to_string());
+    lines.push("".to_string());
+    lines.push(
+        "fn find_entity(schema: Schemas, type_code: u32) -> Option<&'static EntityDef> {"
+            .to_string(),
+    );
+    lines.push("    let defs = match schema {".to_string());
+    for schema in schemas {
+        let const_name = format!("{}_ENTITY_DEFS", schema.name_clean.to_uppercase());
+        lines.push(format!(
+            "        Schemas::{} => {const_name},",
+            schema.name_clean
+        ));
+    }
+    lines.push("    };".to_string());
+    lines.push("    defs.iter().find(|def| def.type_code == type_code)".to_string());
+    lines.push("}".to_string());
+    lines.push("".to_string());
+    lines
 }
 
 struct OrderedSet {

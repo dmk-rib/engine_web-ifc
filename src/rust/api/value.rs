@@ -27,6 +27,13 @@ impl Value {
         }
     }
 
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            Value::Number(num) => Some(*num as f64),
+            _ => None,
+        }
+    }
+
     pub fn as_array(&self) -> Option<&Vec<Value>> {
         match self {
             Value::Array(values) => Some(values),
