@@ -1642,10 +1642,10 @@ impl<'a> IfcGeometryLoader<'a> {
         )
     }
 
-    pub fn get_color_into(&self, _express_id: u32, _output_color: &DVec4) -> bool {
+    // C++ mapping: GetColor(expressID, outputColor).
+    pub fn get_color_into(&self, _express_id: u32, _output_color: &mut DVec4) -> bool {
         if let Some(color) = self.get_color(_express_id) {
-            let _ = _output_color;
-            let _ = color;
+            *_output_color = color;
             return true;
         }
         false

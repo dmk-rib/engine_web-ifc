@@ -307,6 +307,11 @@ impl<'a> IfcGeometryProcessor<'a> {
         flat_mesh
     }
 
+    // C++ default argument mapping: GetFlatMesh(expressID, applyLinearScalingFactor=true).
+    pub fn get_flat_mesh_default(&mut self, express_id: u32) -> IfcFlatMesh {
+        self.get_flat_mesh(express_id, true)
+    }
+
     pub fn get_mesh(&self, express_id: u32) -> IfcComposedMesh {
         let mut mesh = IfcComposedMesh::default();
         mesh.express_id = express_id;
