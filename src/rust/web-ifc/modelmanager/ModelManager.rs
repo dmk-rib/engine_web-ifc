@@ -69,6 +69,14 @@ impl ModelManager {
         self.geometry_processors.get(&_model_id)
     }
 
+    // C++ mapping: GetGeometryProcessor returns a mutable pointer.
+    pub fn get_geometry_processor_mut(
+        &mut self,
+        model_id: u32,
+    ) -> Option<&mut IfcGeometryProcessor> {
+        self.geometry_processors.get_mut(&model_id)
+    }
+
     pub fn get_settings(&self, model_id: u32) -> Option<&LoaderSettings> {
         self.settings.get(model_id as usize)
     }

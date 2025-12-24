@@ -119,6 +119,8 @@ impl IfcTokenStream {
     }
 
     pub fn push<T: Copy>(&mut self, input: T) {
+        // Safety: we only read the bytes of a Copy POD value for serialization;
+        // the slice is valid for size_of::<T>() and does not outlive `input`.
         self.push_bytes(unsafe {
             std::slice::from_raw_parts((&input as *const T) as *const u8, std::mem::size_of::<T>())
         });
@@ -153,6 +155,11 @@ impl IfcTokenStream {
             self.active_chunks += 1;
         }
         self.chunks.last_mut().unwrap().push_bytes(bytes);
+    }
+
+    // C++ mapping: Push(void*, size).
+    pub fn push_raw(&mut self, bytes: &[u8]) {
+        self.push_bytes(bytes);
     }
 
     pub fn read_string(&mut self) -> &str {

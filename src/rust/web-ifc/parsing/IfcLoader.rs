@@ -579,6 +579,16 @@ impl IfcLoader {
         self.token_stream_mut().push_bytes(data);
     }
 
+    // C++ mapping: Push(void*, size).
+    pub fn push_raw(&mut self, data: &[u8]) {
+        self.push_bytes(data);
+    }
+
+    // C++ template mapping: Push(T input).
+    pub fn push<T: Copy>(&mut self, input: T) {
+        self.token_stream_mut().push(input);
+    }
+
     pub fn get_total_size(&self) -> u64 {
         self.token_stream_ref().get_total_size() as u64
     }
